@@ -1,22 +1,48 @@
 export default class Cell {
-	static r = 0.1;
+	static r = 1;
 	static N0 = 1.0;
 	static lifetime = 255.0;
-	constructor(x_, y_, state_) {
+	constructor(x_, y_, index, numGenerations) {
 		this.x = x_;
 		this.y = y_;
-		this.state = state_;
-		this.counter = 0;
+		this.numGenerations = numGenerations;
+		this.state = new Array(this.numGenerations);
+		this.index = index;
+		this.init();
 	}
 
-	savePrevious = function () {
-		this.previous = this.counter;
+	init() {
+		for (var i = 0; i < this.numGenerations; i++) {
+			this.state[i] = 0;
+		}
+	}
+
+	getPos = function () {
+		return [this.x, this.y];
 	};
 
-	newState = function (s) {
-		this.counter = s;
+	getColor = function (gen) {
 		// population dynamic function
-		this.state =
-			1 / ((1 / N0 - 1 / lifetime) * Math.exp(-r * counter) + 1 / lifetime);
+		return (
+			1 /
+			((1 / Cell.N0 - 1 / Cell.lifetime) * Math.exp(-Cell.r * this.state[gen]) +
+				1 / Cell.lifetime)
+		);
 	};
+
+	getIndex = () => {
+		return this.index;
+	};
+
+	getPrevious = function (i) {
+		return this.state[i - 1];
+	};
+
+	getCurrent = function (i) {
+		return this.state[i];
+	};
+
+	setCurrent(i, s) {
+		this.state[i] = s;
+	}
 }
