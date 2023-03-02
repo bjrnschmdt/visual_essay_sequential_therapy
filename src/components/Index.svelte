@@ -23,51 +23,47 @@
 			.range([0, 100]);
 
 		//Create SVG element
-		var svg = d3.select("main")
-		.append("svg")
-		.attr("width", w)
-		.attr("height", h);
+		let svg = d3.select("main")
+			.append("svg")
+			.attr("width", w)
+			.attr("height", h);
 
 		//Create polygons
 		svg.selectAll("path")
-		.data(board.points)
-		.enter()
-		.append("path")
-		.attr("d", function (d, i) {
-        	return board.voronoi.renderCell(i);
+			.data(board.points)
+			.enter()
+			.append("path")
+			.attr("d", function (d, i) {
+        		return board.voronoi.renderCell(i);
     		})
-    	.attr("stroke", "black")
-    	.attr("stroke-width", "1px")
-		.attr("fill", function(d) {
-			var perlin = noise(d[0] * noiseScale, d[1] * noiseScale);
-			var color = Math.floor(scaleLinear(perlin));
-			return "rgb(" + color + ", " + color + ", " + color + ")";
-		})
+   	 		.attr("stroke", "black")
+    		.attr("stroke-width", "1px")
+			.attr("fill", function(d) {
+				let perlin = noise(d[0] * noiseScale, d[1] * noiseScale);
+				let color = Math.floor(scaleLinear(perlin));
+				return "rgb(" + color + ", " + color + ", " + color + ")";
+			})
 
 
 		d3.select(window)
-		.on("scroll", function(e) {
-			svg.selectAll("path")
-			.data(board.cells)
-			//.transition()
-			//.duration(100)
-			.attr("fill", function(d, i) {
-				var [xPos, yPos] = d.getPos();
-				var perlin = noise(xPos * noiseScale, yPos * noiseScale);
-				var p = Math.floor(scaleLinear(perlin));
-				var fromColor = d3.rgb(p, p, p);
-				var toColor = d3.rgb("white");
-				var ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 4))/1);
-				var color = Math.floor(scaleLinear(perlin));
-				var interpolator = d3.interpolateRgb(fromColor, toColor);
-				return interpolator(ease); 
-
-		})
-	})
-		
-		
+			.on("scroll", function(e) {
+				svg.selectAll("path")
+				.data(board.cells)
+				//.transition()
+				//.duration(100)
+				.attr("fill", function(d, i) {
+					let [xPos, yPos] = d.getPos();
+					let perlin = noise(xPos * noiseScale, yPos * noiseScale);
+					let p = Math.floor(scaleLinear(perlin));
+					let fromColor = d3.rgb(p, p, p);
+					let toColor = d3.rgb("white");
+					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 4))/1);
+					let color = Math.floor(scaleLinear(perlin));
+					let interpolator = d3.interpolateRgb(fromColor, toColor);
+					return interpolator(ease); 
+				})
+			})	
 	});
-	
 </script>
 
 <!-- <div class="foreground">
@@ -80,8 +76,8 @@
 		d={board.voronoi.renderCell(cell.getIndex())} 
 		fill={function() {
 			const [xPos, yPos] = cell.getPos(i);
-			var perlin = noise(xPos * noiseScale, yPos * noiseScale);
-			var color = Math.floor(scaleLinear(perlin));
+			let perlin = noise(xPos * noiseScale, yPos * noiseScale);
+			let color = Math.floor(scaleLinear(perlin));
 			return "rgb(" + color + ", " + color + ", " + color + ")";}}></path>	
 	{/each}
 </svg> -->

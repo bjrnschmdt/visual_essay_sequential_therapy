@@ -26,7 +26,7 @@ export default class Board {
 
 	init() {
 		// Populate array with cells
-		for (var i = 0; i < this.points.length; i++) {
+		for (let i = 0; i < this.points.length; i++) {
 			this.cells[i] = new Cell(
 				this.points[i][0],
 				this.points[i][1],
@@ -44,35 +44,35 @@ export default class Board {
 	}
 
 	generate() {
-		for (var gen = 1; gen < this.numGenerations; gen++) {
+		for (let gen = 1; gen < this.numGenerations; gen++) {
 			// Loop through every spot in our 1D cell array and check neighbors
-			for (var cell = 0; cell < this.cells.length; cell++) {
+			for (let cell = 0; cell < this.cells.length; cell++) {
 				if (this.cells[cell].state[gen - 1] < this.threshold) {
 					// Add up all the states of the neighboring cells
-					var sumNeighbors = 0;
-					var sumDistances = 0;
-					var sumWeights = 0;
-					var distances = [];
-					var counter = 0;
-					var x1 = this.points[cell][0];
-					var y1 = this.points[cell][1];
-					//var neighbors = 0;
+					let sumNeighbors = 0;
+					let sumDistances = 0;
+					let sumWeights = 0;
+					let distances = [];
+					let counter = 0;
+					let x1 = this.points[cell][0];
+					let y1 = this.points[cell][1];
+					//let neighbors = 0;
 					for (const neighbor of this.voronoi.neighbors(cell)) {
-						var x2 = this.points[neighbor][0];
-						var y2 = this.points[neighbor][1];
+						let x2 = this.points[neighbor][0];
+						let y2 = this.points[neighbor][1];
 						sumDistances += dist(x1, y1, x2, y2);
 						distances.push([neighbor, dist(x1, y1, x2, y2)]);
 						sumNeighbors += this.cells[neighbor].getPrevious(gen);
 						counter += 1;
 					}
 
-					for (var i = 0; i < counter; i++) {
+					for (let i = 0; i < counter; i++) {
 						sumWeights +=
 							(sumDistances / distances[i][1]) *
 							this.cells[distances[i][0]].getPrevious(gen);
 					}
 
-					var weightAverage = sumWeights / counter;
+					let weightAverage = sumWeights / counter;
 
 					if (weightAverage > this.threshold) {
 						this.cells[cell].setCurrent(gen, Cell.r);

@@ -12,7 +12,7 @@ export default class Cell {
 	}
 
 	init() {
-		for (var i = 0; i < this.numGenerations; i++) {
+		for (let i = 0; i < this.numGenerations; i++) {
 			this.state[i] = 0;
 		}
 	}
