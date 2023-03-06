@@ -11,11 +11,11 @@ export default class Cell {
 		this.init();
 	}
 
-	init() {
+	init = () => {
 		for (let i = 0; i < this.numGenerations; i++) {
 			this.state[i] = 0;
 		}
-	}
+	};
 
 	getPos = () => {
 		return [this.x, this.y];
