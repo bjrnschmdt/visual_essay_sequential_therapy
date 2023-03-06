@@ -17,11 +17,11 @@ export default class Cell {
 		}
 	}
 
-	getPos = function () {
+	getPos = () => {
 		return [this.x, this.y];
 	};
 
-	getColor = function (gen) {
+	getColor = (gen) => {
 		// population dynamic function
 		return (
 			1 /
@@ -34,15 +34,15 @@ export default class Cell {
 		return this.index;
 	};
 
-	getPrevious = function (i) {
+	getPrevious = (i) => {
 		return this.state[i - 1];
 	};
 
-	getCurrent = function (i) {
+	getCurrent = (i) => {
 		return this.state[i];
 	};
 
-	setCurrent(i, s) {
+	setCurrent = (i, s) => {
 		this.state[i] = s;
-	}
+	};
 }
