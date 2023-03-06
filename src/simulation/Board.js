@@ -35,10 +35,7 @@ export default class Board {
 			);
 		}
 		// Initialize starting point for growth
-		this.index = this.delaunay.find(
-			Math.random() * this.width,
-			(Math.random() * this.height) / 2
-		);
+		this.index = this.delaunay.find(Math.random() * 2000, 0);
 
 		this.cells[this.index].setCurrent(0, Cell.r);
 	}
