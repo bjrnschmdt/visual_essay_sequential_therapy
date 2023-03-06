@@ -5,6 +5,7 @@
 	import { octave, perlin2 } from "./../simulation/perlinNoise"
 	import archieml from "archieml";
 	import text from "./../data/text.txt?raw"
+	import { attr } from "svelte/internal";
 
 	const parsed = archieml.load(text);
 	const str = JSON.stringify(parsed);
@@ -19,7 +20,7 @@
 	onMount(() => {
 		let height = d3.select(".wrapper").node().getBoundingClientRect();
 		console.log(height.height);
-		board = new Board(w, h, 500);
+		board = new Board(w, 1000, 1000);
 		board.generate();
 		cells = board.cells;
 		//console.log(board);
@@ -27,6 +28,14 @@
 		let scaleLinear = d3.scaleLinear()
 			.domain([-1, 1])
 			.range([0, 100]);
+
+		let strokeScale = d3.scaleLinear()
+			.domain([0, 255])
+			.range([32, 0]);
+
+		let radiusScale = d3.scaleLinear()
+			.domain([0, 255])
+			.range([1, 16]);
 
 		const baseColor = (x, y, noiseScale) => {
 			let perlin = noise(x * noiseScale, y * noiseScale);
@@ -42,25 +51,64 @@
 			.attr("class", "sim");
 
 		//Create polygons
-		svg.selectAll("path")
+		/* svg.selectAll("path")
 			.data(board.points)
 			.enter()
 			.append("path")
 			.attr("d", function (d, i) {
         		return board.voronoi.renderCell(i);
     		})
-   	 		.attr("stroke", function(d) {
-				let color = baseColor(d[0], d[1], noiseScale);
-				return color.brighter().formatRgb();
-			})
-    		.attr("stroke-width", "1px")
 			.attr("fill", function(d) {
 				let color = baseColor(d[0], d[1], noiseScale);
-				return color.formatRgb();
+				return color.formatRgb()
 			})
+			.attr("stroke", "black")
+			.attr("stroke-width", "32px")
+			.attr("mask", function(d, i) {
+				return "url(#" + i + ")"
+			}); */
+
+		svg.selectAll("circle")
+			.data(board.cells)
+			.enter()
+			.append("circle")
+			.attr("cx", function (d) {
+				let [xPos, yPos] = d.getPos();
+        		return xPos;
+    		})
+			.attr("cy", function (d) {
+				let [xPos, yPos] = d.getPos();
+        		return yPos;
+    		})
+			.attr("fill", function(d) {
+				let [xPos, yPos] = d.getPos();
+				let color = baseColor(xPos, yPos, noiseScale);
+				return color.formatRgb()
+			})
+			.attr("r", function(d) {
+				let radius = radiusScale(d.getCurrent(y))
+				return radius.toString()
+			})
+			.attr("mask", function(d, i) {
+				return "url(#" + i + ")"
+			});
+
+		//Create Masks
+		svg.selectAll("mask")
+			.data(board.points)
+			.enter()
+			.append("mask")
+			.attr("id", function(d, i) {
+				return i
+			})
+			.append("path")
+			.attr("d", function (d, i) {
+        		return board.voronoi.renderCell(i);
+    		})
+			.attr("fill", "white");
 
 
-		d3.select(window)
+		/* d3.select(window)
 			.on("scroll", function() {
 				let color;
 				svg.selectAll("path")
@@ -83,6 +131,23 @@
 					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 8))/1);
 					return interpolator(ease); 
 				})
+				.attr("stroke-width", function(d) {
+					let stroke = strokeScale(d.getCurrent(Math.round(y / 1) / 1))
+					return stroke.toString()
+				});
+			})	 */
+
+			d3.select(window)
+			.on("scroll", function() {
+				let color;
+				svg.selectAll("circle")
+				.data(board.cells)
+				//.transition()
+				//.duration(100)
+				.attr("r", function(d) {
+				let radius = radiusScale(d.getCurrent(Math.round(y / 1) / 1))
+				return radius.toString()
+			})
 			})	
 	});
 </script>
