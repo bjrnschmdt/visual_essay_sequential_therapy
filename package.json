@@ -1,5 +1,5 @@
 {
-	"name": "svelte-starter",
+	"name": "visual_essay_sequential_therapy",
 	"version": "5.4.0",
 	"scripts": {
 		"gdoc": "node tasks/fetch-google.js",
@@ -40,7 +40,7 @@
 		"node": ">= 18.12.0"
 	},
 	"browserslist": "> 0.5%, last 4 versions, not ie <= 11, not ie_mob <= 11",
-	"subdirectory": "svelte-starter",
+	"subdirectory": "visual_essay_sequential_therapy",
 	"dependencies": {
 		"d3-delaunay": "^6.0.2",
 		"d3-hexbin": "^0.2.2",
