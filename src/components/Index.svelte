@@ -5,6 +5,7 @@
 	import { octave, perlin2 } from "./../simulation/perlinNoise"
 	import archieml from "archieml";
 	import text from "./../data/text.txt?raw"
+	import Cell from "./../simulation/Cell";
 
 	const parsed = archieml.load(text);
 	const str = JSON.stringify(parsed);
@@ -51,7 +52,7 @@
     		})
    	 		.attr("stroke", function(d) {
 				let color = baseColor(d[0], d[1], noiseScale);
-				return color.brighter().formatRgb();
+				return color.brighter(0.5).formatRgb();
 			})
     		.attr("stroke-width", "1px")
 			.attr("fill", function(d) {
@@ -72,7 +73,7 @@
 					let fromColor = baseColor(xPos, yPos, noiseScale);
 					let toColor = d3.rgb("dimgrey");
 					let interpolator = d3.interpolateRgb(fromColor, toColor);
-					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 8))/1);
+					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 8)) / 25);
 					return interpolator(ease); 
 				})
 				.attr("stroke", function(d, i) {
@@ -80,8 +81,8 @@
 					let fromColor = baseColor(xPos, yPos, noiseScale).brighter(0.5);
 					let toColor = d3.rgb("dimgrey").brighter(0.5);
 					let interpolator = d3.interpolateRgb(fromColor, toColor);
-					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 8))/1);
-					return interpolator(ease); 
+					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 8)) / 25);
+					return interpolator(ease)
 				})
 			})	
 	});
@@ -89,7 +90,8 @@
 
 <div class="wrapper">
 	<div class='card-wrap'>
-		<!-- <h1>{parsed.h1}</h1> -->
+		<h1>{parsed.h1}</h1>
+		<h2>Ein Visual Essay des Kiel Science Communication Network</h2>
 		<!-- <h1>Antibiotikaresistenz</h1>
 		<h2>Ein Wettlauf mit der Evolution</h2> -->
 	</div>	
@@ -124,21 +126,29 @@
 
 <style>
 
-	.sim {
-		position: absolute;
-	}
-
 	h1 {
 		font-family: "Golos Text";
 		font-weight: 700;
 		line-height: 1;
 		font-size: var(--56px);
-		position:absolute;
+		/* position:absolute; */
         z-index: 99;
-		color: black;
+		color: white;
 		width: 100%;
   		text-align: left;
     }
+
+	h2 {
+		font-family: "Golos Text";
+		font-weight: 400;
+		line-height: 1;
+		font-size: var(--18px);
+		/* position:absolute; */
+        z-index: 99;
+		color: white;
+		width: 100%;
+  		text-align: left;
+	}
 
 	p {
 		font-family: "Golos Text";
@@ -152,6 +162,7 @@
 
 	.card-wrap {
         display: flex;
+		flex-direction: column;
 		justify-content: center;
 		align-items: flex-start;
 		z-index: 1;
