@@ -3,7 +3,7 @@
 	export let description = "Description TK";
 	export let url = "https://pudding.cool";
 	export let keywords = "";
-	export let preloadFont = [];
+	//export let preloadFont = [];
 </script>
 
 <svelte:head>
@@ -35,7 +35,7 @@
 
 	<link rel="canonical" href="{url}/" />
 
-	{#each preloadFont as href}
+	<!-- {#each preloadFont as href}
 		<link rel="preload" {href} as="font" type="font/woff2" crossorigin />
-	{/each}
+	{/each} -->
 </svelte:head>
