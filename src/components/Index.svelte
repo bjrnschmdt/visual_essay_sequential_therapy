@@ -11,29 +11,29 @@
 	const str = JSON.stringify(parsed);
 
 	let w, h, y;
-	let noiseScale = 0.001;
-	let octaves = 5;
+	/* let noiseScale = 0.001; */
+	/* let octaves = 5; */
 	let board;
 	let cells = [];
- 	let noise = octave(perlin2, octaves);
+ 	/* let noise = octave(perlin2, octaves); */
 
 	onMount(() => {
 		let height = d3.select(".wrapper").node().getBoundingClientRect();
-		console.log(height.height);
+		//console.log(height.height);
 		board = new Board(w, h, 500);
 		board.generate();
 		cells = board.cells;
 		//console.log(board);
 
-		let scaleLinear = d3.scaleLinear()
+		/* let scaleLinear = d3.scaleLinear()
 			.domain([-1, 1])
-			.range([0, 100]);
+			.range([0, 100]); */
 
-		const baseColor = (x, y, noiseScale) => {
+		/* const baseColor = (x, y, noiseScale) => {
 			let perlin = noise(x * noiseScale, y * noiseScale);
 			let p = Math.floor(scaleLinear(perlin));
 			return d3.rgb(p, p, p);
-		}
+		} */
 
 		//Create SVG element
 		let svg = d3.select("main")
