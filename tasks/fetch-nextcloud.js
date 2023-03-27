@@ -7,14 +7,15 @@ const CWD = process.cwd();
 const fetchNextcloud = async ({ id, gid }) => {
 	console.log(`fetching...${id}`);
 
-	const base = "https://cloud.rz.uni-kiel.de";
-	const post = `index.php/s/${id}/export?format=txt`;
+	const base = "https://cloud.rz.uni-kiel.de/";
+	const post = gid
+		? `spreadsheets/u/1/d/${id}/export?format=csv&id=${id}&gid=${gid}`
+		: `index.php/s/${id}/download`;
 	const url = `${base}/${post}`;
 
 	try {
 		const response = await fetch(url);
 		const text = await response.text();
-		console.log(text);
 		const parsed = archieml.load(text);
 		const str = JSON.stringify(parsed);
 		return str;
