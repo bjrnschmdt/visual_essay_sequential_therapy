@@ -2,152 +2,104 @@
 	import { getContext, onMount } from "svelte";
 	import Board from "./../simulation/Board";
 	import * as d3 from "d3";
-	import { octave, perlin2 } from "./../simulation/perlinNoise"
 	import archieml from "archieml";
-	import text from "./../data/text.txt?raw"
-	import Cell from "./../simulation/Cell";
+	import text from "./../data/text.txt?raw";
 
 	const parsed = archieml.load(text);
-	const str = JSON.stringify(parsed);
 
 	let w, h, y;
-	/* let noiseScale = 0.001; */
-	/* let octaves = 5; */
 	let board;
 	let cells = [];
- 	/* let noise = octave(perlin2, octaves); */
 
 	onMount(() => {
 		let height = d3.select(".wrapper").node().getBoundingClientRect();
-		//console.log(height.height);
 		board = new Board(w, h, 500);
 		board.generate();
 		cells = board.cells;
-		//console.log(board);
-
-		/* let scaleLinear = d3.scaleLinear()
-			.domain([-1, 1])
-			.range([0, 100]); */
-
-		/* const baseColor = (x, y, noiseScale) => {
-			let perlin = noise(x * noiseScale, y * noiseScale);
-			let p = Math.floor(scaleLinear(perlin));
-			return d3.rgb(p, p, p);
-		} */
+		console.log(board);
 
 		//Create SVG element
-		let svg = d3.select("main")
+		let svg = d3
+			.select("main")
 			.append("svg")
 			.attr("width", w)
 			.attr("height", height.height)
 			.attr("class", "sim");
 
 		//Create polygons
-		svg.selectAll("path")
+		svg
+			.selectAll("path")
 			.data(board.points)
 			.enter()
 			.append("path")
 			.attr("d", function (d, i) {
-        		return board.voronoi.renderCell(i);
-    		})
-   	 		.attr("stroke", function(d) {
-				let color = baseColor(d[0], d[1], noiseScale);
-				return color.brighter(0.5).formatRgb();
+				return board.voronoi.renderCell(i);
 			})
-    		.attr("stroke-width", "1px")
-			.attr("fill", function(d) {
-				let color = baseColor(d[0], d[1], noiseScale);
-				return color.formatRgb();
+			.attr("stroke", function (d, i) {
+				let color = d3.color(cells[i].getColor(0));
+				return color.brighter().formatRgb();
 			})
+			.attr("stroke-width", "1px")
+			.attr("fill", function (d, i) {
+				let color = d3.color(cells[i].getColor(0));
+				return color;
+			});
 
-
-		d3.select(window)
-			.on("scroll", function() {
-				let color;
-				svg.selectAll("path")
+		// Update polygons on scroll
+		d3.select(window).on("scroll", function () {
+			svg
+				.selectAll("path")
 				.data(board.cells)
 				//.transition()
 				//.duration(100)
-				.attr("fill", function(d, i) {
-					let [xPos, yPos] = d.getPos();
-					let fromColor = baseColor(xPos, yPos, noiseScale);
-					let toColor = d3.rgb("dimgrey");
-					let interpolator = d3.interpolateRgb(fromColor, toColor);
-					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 8)) / 25);
-					return interpolator(ease); 
+				.attr("fill", function (d) {
+					let color = d.getColor(Math.round(y / 8));
+					return color;
 				})
-				.attr("stroke", function(d, i) {
-					let [xPos, yPos] = d.getPos();
-					let fromColor = baseColor(xPos, yPos, noiseScale).brighter(0.5);
-					let toColor = d3.rgb("dimgrey").brighter(0.5);
-					let interpolator = d3.interpolateRgb(fromColor, toColor);
-					let ease = d3.easeExpInOut(d.getCurrent(Math.round(y / 8)) / 25);
-					return interpolator(ease)
-				})
-			})	
+				.attr("stroke", function (d, i) {
+					let color = d3.color(d.getColor(Math.round(y / 8)));
+					return color.brighter().formatRgb();
+				});
+		});
 	});
 </script>
 
 <div class="wrapper">
-	<div class='card-wrap'>
+	<div class="card-wrap">
 		<h1>{parsed.h1}</h1>
 		<h2>Ein Visual Essay des Kiel Science Communication Network</h2>
-		<!-- <h1>Antibiotikaresistenz</h1>
-		<h2>Ein Wettlauf mit der Evolution</h2> -->
-	</div>	
-	
+	</div>
+
 	{#each parsed.text as paragraph}
-	<div class='card-wrap'>
-		<p class="card">{paragraph.value}</p>
-	</div>	
+		<div class="card-wrap">
+			<p class="card">{paragraph.value}</p>
+		</div>
 	{/each}
 </div>
 
-
-<!-- <div class="foreground">
-	You have scrolled {y} pixels
-</div> -->
-
-<!-- <svg width={w} height={h}>
-	{#each cells as cell, i}
-		<path 
-		d={board.voronoi.renderCell(cell.getIndex())} 
-		fill={function() {
-			const [xPos, yPos] = cell.getPos(i);
-			let perlin = noise(xPos * noiseScale, yPos * noiseScale);
-			let color = Math.floor(scaleLinear(perlin));
-			return "rgb(" + color + ", " + color + ", " + color + ")";}}></path>	
-	{/each}
-</svg> -->
-
-
-
-<svelte:window bind:scrollY={y} bind:innerWidth={w} bind:innerHeight={h}/>
+<svelte:window bind:scrollY={y} bind:innerWidth={w} bind:innerHeight={h} />
 
 <style>
-
 	h1 {
 		font-family: "Golos Text";
 		font-weight: 700;
 		line-height: 1;
 		font-size: var(--56px);
-		/* position:absolute; */
-        z-index: 99;
+		z-index: 99;
 		color: white;
 		width: 100%;
-  		text-align: left;
-    }
+		text-align: left;
+	}
 
 	h2 {
 		font-family: "Golos Text";
 		font-weight: 400;
 		line-height: 1;
 		font-size: var(--18px);
-		/* position:absolute; */
-        z-index: 99;
+		z-index: 99;
 		color: white;
 		width: 100%;
-  		text-align: left;
+		text-align: left;
 	}
 
 	p {
@@ -161,7 +113,7 @@
 	}
 
 	.card-wrap {
-        display: flex;
+		display: flex;
 		flex-direction: column;
 		justify-content: center;
 		align-items: flex-start;
@@ -170,10 +122,10 @@
 		width: 560px;
 		max-width: calc(100% - 20px);
 		margin: 30vh auto 50vh;
-    }
+	}
 
-    .card {
-        background: rgba(255,255,255,.85);
+	.card {
+		background: rgba(255, 255, 255, 0.85);
 		backdrop-filter: saturate(180%) blur(10px);
 		-webkit-backdrop-filter: saturate(180%) blur(10px);
 		padding: 18px 24px;
@@ -181,10 +133,5 @@
 		max-width: 560px;
 		border-radius: 4px;
 		box-shadow: 0 0 20px -10px black;
-    }
+	}
 </style>
-
-
-
-
-<!-- <Footer /> -->

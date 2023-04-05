@@ -1,13 +1,18 @@
 import Cell from "./Cell";
 import { Delaunay } from "d3-delaunay";
+import { poissonDiscSampler } from "./poissonDiscSampler";
+
+function dist(x1, y1, x2, y2) {
+	return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+}
 
 export default class Board {
-	constructor(width = 500, height = 500, numGenerations) {
+	constructor(width_ = 500, height_ = 500, numGenerations) {
 		this.threshold = Cell.r;
 		this.numGenerations = numGenerations;
 		this.radius = 16;
-		this.width = width;
-		this.height = height;
+		this.width = width_;
+		this.height = height_;
 
 		this.points = [
 			...poissonDiscSampler(0, 0, this.width, this.height, this.radius)
@@ -36,16 +41,19 @@ export default class Board {
 		}
 		// Initialize starting point for growth
 		this.index = this.delaunay.find(Math.random() * 2000, 0);
-
 		this.cells[this.index].setCurrent(0, Cell.r);
 	}
 
 	generate() {
+		// Loop through every generation
+		// Generate the next generation of cells
+
 		for (let gen = 1; gen < this.numGenerations; gen++) {
 			// Loop through every spot in our 1D cell array and check neighbors
 			for (let cell = 0; cell < this.cells.length; cell++) {
-				if (this.cells[cell].state[gen - 1] < this.threshold) {
-					// Add up all the states of the neighboring cells
+				if (this.cells[cell].getPrevious(gen) < this.threshold) {
+					// If the state of the previous gen is below the threshold, check if the neighbors states are above the threshold
+					
 					let sumNeighbors = 0;
 					let sumDistances = 0;
 					let sumWeights = 0;
@@ -53,7 +61,11 @@ export default class Board {
 					let counter = 0;
 					let x1 = this.points[cell][0];
 					let y1 = this.points[cell][1];
-					//let neighbors = 0;
+
+					// Loop through all the neighbors of the current cell
+					// Add up the distances between the current cell and its neighbors
+					// Add up the previous states of the neighbors
+					// Count the number of neighbors
 					for (const neighbor of this.voronoi.neighbors(cell)) {
 						let x2 = this.points[neighbor][0];
 						let y2 = this.points[neighbor][1];
@@ -63,6 +75,8 @@ export default class Board {
 						counter += 1;
 					}
 
+					// Normalize the distances between the current cell and its neighbors
+					// Multiply the normalized distances by the previous states of the neighbors to get weighted states
 					for (let i = 0; i < counter; i++) {
 						sumWeights +=
 							(sumDistances / distances[i][1]) *
@@ -71,12 +85,16 @@ export default class Board {
 
 					let weightAverage = sumWeights / counter;
 
+					// If the sum of the neighbors is above the threshold, set the current cell to the threshold
 					if (weightAverage > this.threshold) {
 						this.cells[cell].setCurrent(gen, Cell.r);
 					}
-				} else if (this.cells[cell].state[gen - 1] == Cell.lifetime) {
-					return;
+				} else if (this.cells[cell].getPrevious(gen) == Cell.lifetime) {
+					// If the sum of the neighbors is above the max, set the state to the max
+					this.cells[cell].setCurrent(gen, Cell.lifetime);
+					
 				} else {
+					// If the sum of the neighbors is above the threshold but below the max, increment the state by 1
 					this.cells[cell].setCurrent(
 						gen,
 						this.cells[cell].getPrevious(gen) + Cell.r
@@ -85,80 +103,4 @@ export default class Board {
 			}
 		}
 	}
-}
-
-function* poissonDiscSampler(x0, y0, x1, y1, radius) {
-	const k = 30; // maximum number of samples before rejection
-	const width = x1 - x0;
-	const height = y1 - y0;
-	const radius2 = radius * radius;
-	const radius2_3 = 3 * radius2;
-	const cellSize = radius * Math.SQRT1_2;
-	const gridWidth = Math.ceil(width / cellSize);
-	const gridHeight = Math.ceil(height / cellSize);
-	const grid = new Array(gridWidth * gridHeight);
-	const queue = [];
-
-	// Pick the first sample.
-	yield sample(
-		width / 2 + Math.random() * radius,
-		height / 2 + Math.random() * radius
-	);
-
-	// Pick a random existing sample from the queue.
-	pick: while (queue.length) {
-		const i = (Math.random() * queue.length) | 0;
-		const parent = queue[i];
-
-		// Make a new candidate between [radius, 2 * radius] from the existing sample.
-		for (let j = 0; j < k; ++j) {
-			const a = 2 * Math.PI * Math.random();
-			const r = Math.sqrt(Math.random() * radius2_3 + radius2);
-			const x = parent[0] + r * Math.cos(a);
-			const y = parent[1] + r * Math.sin(a);
-
-			// Accept candidates that are inside the allowed extent
-			// and farther than 2 * radius to all existing samples.
-			if (0 <= x && x < width && 0 <= y && y < height && far(x, y)) {
-				yield sample(x, y);
-				continue pick;
-			}
-		}
-
-		// If none of k candidates were accepted, remove it from the queue.
-		const r = queue.pop();
-		if (i < queue.length) queue[i] = r;
-	}
-
-	function far(x, y) {
-		const i = (x / cellSize) | 0;
-		const j = (y / cellSize) | 0;
-		const i0 = Math.max(i - 2, 0);
-		const j0 = Math.max(j - 2, 0);
-		const i1 = Math.min(i + 3, gridWidth);
-		const j1 = Math.min(j + 3, gridHeight);
-		for (let j = j0; j < j1; ++j) {
-			const o = j * gridWidth;
-			for (let i = i0; i < i1; ++i) {
-				const s = grid[o + i];
-				if (s) {
-					const dx = s[0] - x;
-					const dy = s[1] - y;
-					if (dx * dx + dy * dy < radius2) return false;
-				}
-			}
-		}
-		return true;
-	}
-
-	function sample(x, y, parent) {
-		queue.push(
-			(grid[gridWidth * ((y / cellSize) | 0) + ((x / cellSize) | 0)] = [x, y])
-		);
-		return [x + x0, y + y0];
-	}
-}
-
-function dist(x1, y1, x2, y2) {
-	return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
 }
