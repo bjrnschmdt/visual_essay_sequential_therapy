@@ -35,7 +35,7 @@ export default class Cell {
 		this.state = new Array(this.numGenerations);											// State of the cell per generation
 		this.color = new Array(this.numGenerations);											// Color of the cell per generation
 		this.noiseBaseScale = 0.001;															// Scale of the perlin noise of the antibiotic medium
-		this.noiseBactScale = 0.01;																// Scale of the perlin noise of the bacteria
+		this.noiseBactScale = 0.008;																// Scale of the perlin noise of the bacteria
 		this.noiseBaseFactor = 0.5;																// Factor of the perlin noise of the antibiotic medium
 		this.noiseBactFactor = 0.9;																// Factor of the perlin noise of the bacteria
 		this.noiseBase = calcNoise(this.x, this.y, this.noiseBaseScale); 						// Perlin noise of the antibiotic medium
