@@ -15,7 +15,7 @@ function multiplyRgb(c1, c2, factor) {
 function calcNoise(x, y, noiseScale) {
 	let perlinNorm = noise(
 		x * noiseScale,
-		y * noiseScale
+		y * noiseScale * 0.5
 	);
 	let perlinRgb = Math.round(mapNoise2Rgb(perlinNorm));
 	let perlin = rgb(perlinRgb, perlinRgb, perlinRgb);
