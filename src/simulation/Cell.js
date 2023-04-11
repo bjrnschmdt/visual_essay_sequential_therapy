@@ -32,10 +32,11 @@ export default class Cell {
 		this.y = y_;
 		this.index = index;
 		this.numGenerations = numGenerations;													// Number of generations
-		this.state = new Array(this.numGenerations);											// State of the cell per generation
+		this.state = new Array(this.numGenerations).fill(0);									// State of the cell per generation
+		this.isCAndidate = new Array(this.numGenerations).fill(false);							// Candidate Status per generation
 		this.color = new Array(this.numGenerations);											// Color of the cell per generation
 		this.noiseBaseScale = 0.001;															// Scale of the perlin noise of the antibiotic medium
-		this.noiseBactScale = 0.008;																// Scale of the perlin noise of the bacteria
+		this.noiseBactScale = 0.008;															// Scale of the perlin noise of the bacteria
 		this.noiseBaseFactor = 0.5;																// Factor of the perlin noise of the antibiotic medium
 		this.noiseBactFactor = 0.9;																// Factor of the perlin noise of the bacteria
 		this.noiseBase = calcNoise(this.x, this.y, this.noiseBaseScale); 						// Perlin noise of the antibiotic medium
@@ -84,6 +85,14 @@ export default class Cell {
 		this.state[i] = s;
 		this.setColor(i, s);
 	};
+
+	setCandidate = (i, s) => {
+		this.isCAndidate[i] = s;
+	}
+
+	isAlive = (i) => {
+		return this.state[i] > 0 && this.state[i] < Cell.lifetime;
+	}
 }
 
 var normalizeState = scaleLinear().domain([0, Cell.lifetime]).range([0, 1]);

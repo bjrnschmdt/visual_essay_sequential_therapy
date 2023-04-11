@@ -10,6 +10,7 @@
 	let w, h, y;
 	let board;
 	let cells = [];
+	let dampFactor = 8;
 
 	onMount(() => {
 		let height = d3.select(".wrapper").node().getBoundingClientRect();
@@ -29,36 +30,42 @@
 		//Create polygons
 		svg
 			.selectAll("path")
-			.data(board.points)
+			.data(board.cells, function (d) {
+				return d.getIndex();
+			})
 			.enter()
 			.append("path")
 			.attr("d", function (d, i) {
 				return board.voronoi.renderCell(i);
 			})
-			.attr("stroke", function (d, i) {
-				let color = d3.color(cells[i].getColor(0));
-				return color.brighter().formatRgb();
+			.attr("stroke", function (d) {
+				return d3.color(d.getColor(0)).brighter().formatRgb();
 			})
 			.attr("stroke-width", "1px")
-			.attr("fill", function (d, i) {
-				let color = d3.color(cells[i].getColor(0));
-				return color;
+			.attr("fill", function (d) {
+				return d3.color(d.getColor(0));
 			});
 
 		// Update polygons on scroll
 		d3.select(window).on("scroll", function () {
 			svg
 				.selectAll("path")
-				.data(board.cells)
+				.data(board.cells, function (d) {
+					return d.getIndex();
+				})
+				.filter(function (d) {
+					return d.getStatus(y / dampFactor) == true;
+				})
 				//.transition()
 				//.duration(100)
 				.attr("fill", function (d) {
-					let color = d.getColor(Math.round(y / 8));
-					return color;
+					return d.getColor(Math.round(y / dampFactor));
 				})
-				.attr("stroke", function (d, i) {
-					let color = d3.color(d.getColor(Math.round(y / 8)));
-					return color.brighter().formatRgb();
+				.attr("stroke", function (d) {
+					return d3
+						.color(d.getColor(Math.round(y / dampFactor)))
+						.brighter()
+						.formatRgb();
 				});
 		});
 	});
