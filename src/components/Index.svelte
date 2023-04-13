@@ -11,13 +11,54 @@
 	let board;
 	let cells = [];
 	let dampFactor = 8;
+	let previousY = 0;
+	let currentY = 0;
+	let dY = 0;
+	let inProgress = false;
 
 	onMount(() => {
 		let height = d3.select(".wrapper").node().getBoundingClientRect();
-		board = new Board(w, h, 500);
+		board = new Board(w, 3000, 500);
 		board.generate();
 		cells = board.cells;
 		console.log(board);
+
+		function animate() {
+			dY = currentY - previousY;
+			previousY += dY / 16;
+
+			svg
+				.selectAll("path")
+				.data(board.cells, function (d) {
+					return d.getIndex();
+				})
+				.filter(function (d) {
+					return d.isAlive(Math.round(previousY / dampFactor));
+				})
+				//.transition()
+				//.duration(100)
+				.attr("fill", function (d) {
+					return d.getColor(
+						d.getCurrentStateIndex(Math.round(previousY / dampFactor))
+					);
+				})
+				.attr("stroke", function (d) {
+					return d3
+						.color(
+							d.getColor(
+								d.getCurrentStateIndex(Math.round(previousY / dampFactor))
+							)
+						)
+						.brighter()
+						.formatRgb();
+				});
+
+			if (Math.abs(dY) < 0.1) {
+				inProgress = false;
+				return;
+			}
+			window.requestAnimationFrame(animate);
+		}
 
 		//Create SVG element
 		let svg = d3
@@ -48,25 +89,11 @@
 
 		// Update polygons on scroll
 		d3.select(window).on("scroll", function () {
-			svg
-				.selectAll("path")
-				.data(board.cells, function (d) {
-					return d.getIndex();
-				})
-				.filter(function (d) {
-					return d.getStatus(y / dampFactor) == true;
-				})
-				//.transition()
-				//.duration(100)
-				.attr("fill", function (d) {
-					return d.getColor(Math.round(y / dampFactor));
-				})
-				.attr("stroke", function (d) {
-					return d3
-						.color(d.getColor(Math.round(y / dampFactor)))
-						.brighter()
-						.formatRgb();
-				});
+			currentY = y;
+			if (!inProgress) {
+				inProgress = true;
+				animate();
+			}
 		});
 	});
 </script>

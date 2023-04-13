@@ -24,17 +24,15 @@ function calcNoise(x, y, noiseScale) {
 
 export default class Cell {
 	static r = 1; 																				// Growthrate
-	static lifetime = 16; 																		// Scope of growth, influences tempo of growth
-	static growthExponent = 2; 																	// Slope of growth, influences shape of growth
+	static lifetime = 32; 																		// Scope of growth, influences tempo of growth
+	static growthExponent = 4; 																	// Slope of growth, influences shape of growth
 
-	constructor(x_, y_, index, numGenerations) {
+	constructor(x_, y_, index) {
 		this.x = x_;
 		this.y = y_;
-		this.index = index;
-		this.numGenerations = numGenerations;													// Number of generations
-		this.state = new Array(this.numGenerations).fill(0);									// State of the cell per generation
-		this.isCAndidate = new Array(this.numGenerations).fill(false);							// Candidate Status per generation
-		this.color = new Array(this.numGenerations);											// Color of the cell per generation
+		this.index = index;													
+		this.state = new Array(Cell.lifetime);													// State of the cell per step in lifetime
+		this.color = new Array(Cell.lifetime);													// Color of the cell per step in lifetime
 		this.noiseBaseScale = 0.001;															// Scale of the perlin noise of the antibiotic medium
 		this.noiseBactScale = 0.008;															// Scale of the perlin noise of the bacteria
 		this.noiseBaseFactor = 0.5;																// Factor of the perlin noise of the antibiotic medium
@@ -49,8 +47,8 @@ export default class Cell {
 	}
 
 	init = () => {
-		for (let i = 0; i < this.numGenerations; i++) {
-			this.setCurrent(i, 0);
+		for (let i = 0; i < Cell.lifetime; i++) {
+			this.setColor(i);
 		}
 	};
 
@@ -58,13 +56,13 @@ export default class Cell {
 		return [this.x, this.y];
 	};
 
-	getColor = (gen) => {
-		return this.color[gen];
+	getColor = (i) => {
+		return this.color[i];
 	};
 
-	setColor = (i, s) => {
+	setColor = (i) => {
 		const customPolyInOut = easePolyInOut.exponent(Cell.growthExponent);
-		let factor = customPolyInOut(normalizeState(s));
+		let factor = customPolyInOut(normalizeState(i));
 		const interpolator = interpolateRgb(this.colorBaseComp, this.colorBactComp);	
 		this.color[i] = interpolator(factor);
 	};
@@ -81,17 +79,25 @@ export default class Cell {
 		return this.state[i];
 	};
 
-	setCurrent = (i, s) => {
-		this.state[i] = s;
-		this.setColor(i, s);
+	getState = (i) => {
+		return this.state[i];
 	};
 
-	setCandidate = (i, s) => {
-		this.isCAndidate[i] = s;
-	}
+	getPreviousStateIndex = (gen) => {
+		return this.state.indexOf(gen - 1);
+	};
 
-	isAlive = (i) => {
-		return this.state[i] > 0 && this.state[i] < Cell.lifetime;
+	getCurrentStateIndex = (gen) => {
+		return this.state.indexOf(gen);
+	};
+
+	setCurrent = (i, gen) => {
+		this.state[i] = gen;
+		this.setColor(i);
+	};
+
+	isAlive = (gen) => {
+		return this.state.includes(gen);
 	}
 }
 

@@ -8,7 +8,7 @@ function dist(x1, y1, x2, y2) {
 
 export default class Board {
 	constructor(width_ = 500, height_ = 500, numGenerations) {
-		this.threshold = Cell.r;
+		this.threshold = 2;
 		this.numGenerations = numGenerations;
 		this.radius = 16;
 		this.width = width_;
@@ -39,21 +39,16 @@ export default class Board {
 				this.points[i][0],
 				this.points[i][1],
 				i,
-				this.numGenerations
 			);
 		}
 		// Initialize starting point for growth
+		// Set state[1] to generation 0 which means that this cell is at step 1 in generation 0
+		// Set state[0] of neighbors to generation 0 which means that this cell is at step 0 in generation 0 
 		this.index = this.delaunay.find(Math.random() * 2000, 0);
-		this.cells[this.index].setCurrent(0, Cell.r);
-
-		// Set all neighbors of starting point to candidate
-		for (const neighbor of this.voronoi.neighbors(this.cells[this.index])) {
-			if (this.cells[neighbor].getPrevious() == 0) {
-				this.cells[neighbor].setCandidate(0, true);
-			}
-		};
-		//this.candidates.push(this.cells[this.index]);
-		//this.generations[0].push(this.livingCells.push(this.cells[this.index]));
+		this.cells[this.index].setCurrent(1, 0);
+		for (const neighbor of this.voronoi.neighbors(this.cells[this.index].getIndex())) {	
+			this.cells[neighbor].setCurrent(0, 0);
+		}
 	}
 
 	generate() {
@@ -61,76 +56,41 @@ export default class Board {
 		// Generate the next generation of cells
 
 		for (let gen = 1; gen < this.numGenerations; gen++) {
-			// Loop through all the cells where the previous candidate status is true
-			// Inspect the candidates and set the current state accordingly
-			for (const candidate of this.cells.filter(cell => cell.isCandidate(gen - 1))) {
-				inspectCandidate(candidate, this.cells, this.voronoi, gen, this.threshold);
-			}
-
-			for (const cell of this.cells.filter(cell => cell.isAlive(gen - 1))) {
+			// Filter and loop through all cells that where state[0] equals the previous generations index
+			for (const cell of this.cells.filter(cell => cell.getState(0) == gen - 1)) {
+				// Get the neighbors of the cells
+				for (const neighbor of this.voronoi.neighbors(cell.getIndex())) {
+					// only inspect the neighbors that are not alive in the previous generation
+					if (!this.cells[neighbor].isAlive(gen - 1)) {
+						inspectCandidate(this.cells[neighbor], this.cells, this.voronoi, gen, this.threshold);
+					};
+				}
 				
 			}
 
-			
-
+			// Filter for cells that are alive in the previous gerneration and loop through all the cells where state[] includes the previous generation 
+			// Inspect the cells and set the current state accordingly
+			for (const cell of this.cells.filter(cell => cell.isAlive(gen - 1))) {
+				const index = cell.getPreviousStateIndex(gen);
+				if (index + 1 < Cell.lifetime) {
+					cell.setCurrent(index + 1, gen);
+				}
+			}
 		}
 	}
 }
 
 function inspectCandidate(candidate, cells, voronoi, gen, threshold) {
+	let sumNeighbors = 0;
 
-			let sumNeighbors = 0;
-			let sumDistances = 0;
-			let sumWeights = 0;
-			let distances = [];
-			let counter = 0;
-			let x1 = candidate.getPos()[0];
-			let y1 = candidate.getPos()[1];
+	for (const neighbor of voronoi.neighbors(candidate.getIndex())) {
+		// skip all neighbors that are not alive in the previous generation
+		if (cells[neighbor].isAlive(gen - 1)) {
+			sumNeighbors += 1;
+		};
+	}
 
-			// Loop through all the neighbors of the current cell
-			// Add up the distances between the current cell and its neighbors
-			// Add up the previous states of the neighbors
-			// Count the number of neighbors
-			for (const neighbor of voronoi.neighbors(candidate.getIndex())) {
-				let x2 = cells[neighbor].getPos()[0];
-				let y2 = cells[neighbor].getPos()[1];
-				sumDistances += dist(x1, y1, x2, y2);
-				distances.push([neighbor, dist(x1, y1, x2, y2)]);
-				sumNeighbors += cells[neighbor].getPrevious(gen);
-				counter += 1;
-			}
-
-			// Normalize the distances between the current cell and its neighbors
-			// Multiply the normalized distances by the previous states of the neighbors to get weighted states
-			for (let i = 0; i < counter; i++) {
-				sumWeights +=
-					(sumDistances / distances[i][1]) *
-					cells[distances[i][0]].getPrevious(gen);
-			}
-
-			let weightAverage = sumWeights / counter;
-
-			// If the sum of the neighbors is above the threshold, set the current cell to the threshold 
-			// and set the current candidate status to false
-			
-			if (weightAverage > threshold) {
-				candidate.setCurrent(gen, Cell.r);
-				candidate.setCandidate(gen, false);
-				for (const neighbor of voronoi.neighbors(candidate.getIndex())) {
-					          
-				}
-			} else {
-				// If the sum of the neighbors is below the threshold, set the current candidate status to true
-				candidate.setCandidate(gen, true);
-			}
-		/* } else if (candidate.getPrevious(gen) == Cell.lifetime) {
-			// If the sum of the neighbors is above the max, set the state to the max
-			candidate.setCurrent(gen, Cell.lifetime);			
-		} else {
-			// If the sum of the neighbors is above the threshold but below the max, increment the state by 1
-			candidate.setCurrent(
-				gen,
-				candidate.getPrevious(gen) + Cell.r
-			);
-		}	 */	
+	if (sumNeighbors >= threshold) {
+		candidate.setCurrent(0, gen);
+	}
 }
