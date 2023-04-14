@@ -1,6 +1,6 @@
 {
 	"name": "visual_essay_sequential_therapy",
-	"version": "5.4.0",
+	"version": "0.4.0",
 	"scripts": {
 		"gdoc": "node tasks/fetch-google.js",
 		"ndoc": "node tasks/fetch-nextcloud.js",
