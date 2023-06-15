@@ -35,18 +35,18 @@ export default class Board {
 	init() {
 		// Populate array with cells
 		for (let i = 0; i < this.points.length; i++) {
-			this.cells[i] = new Cell(
-				this.points[i][0],
-				this.points[i][1],
-				i,
-			);
+			this.cells[i] = new Cell(this.points[i][0], this.points[i][1], i);
 		}
+
 		// Initialize starting point for growth
 		// Set state[1] to generation 0 which means that this cell is at step 1 in generation 0
-		// Set state[0] of neighbors to generation 0 which means that this cell is at step 0 in generation 0 
+		// Set state[0] of neighbors to generation 0 which means that this cell is at step 0 in generation 0
 		this.index = this.delaunay.find(Math.random() * 2000, 0);
 		this.cells[this.index].setCurrent(1, 0);
-		for (const neighbor of this.voronoi.neighbors(this.cells[this.index].getIndex())) {	
+
+		for (const neighbor of this.voronoi.neighbors(
+			this.cells[this.index].getIndex()
+		)) {
 			this.cells[neighbor].setCurrent(0, 0);
 		}
 	}
@@ -57,25 +57,35 @@ export default class Board {
 
 		for (let gen = 1; gen < this.numGenerations; gen++) {
 			// Filter and loop through all cells that where state[0] equals the previous generations index
-			for (const cell of this.cells.filter(cell => cell.getState(0) == gen - 1)) {
-				// Get the neighbors of the cells
-				for (const neighbor of this.voronoi.neighbors(cell.getIndex())) {
-					// only inspect the neighbors that are not alive in the previous generation
-					if (!this.cells[neighbor].isAlive(gen - 1)) {
-						inspectCandidate(this.cells[neighbor], this.cells, this.voronoi, gen, this.threshold);
-					};
-				}
-				
-			}
+			this.cells
+				.filter((cell) => cell.getState(0) == gen - 1)
+				.forEach((cell) => {
+					// Get the neighbors of the cells
+					for (const neighbor of this.voronoi.neighbors(cell.getIndex())) {
+						// only inspect the neighbors that are not alive in the previous generation
+						if (!this.cells[neighbor].isAlive(gen - 1)) {
+							// Inspect the candidate and set its current state if necessary
+							inspectCandidate(
+								this.cells[neighbor],
+								this.cells,
+								this.voronoi,
+								gen,
+								this.threshold
+							);
+						}
+					}
+				});
 
-			// Filter for cells that are alive in the previous gerneration and loop through all the cells where state[] includes the previous generation 
+			// Filter for cells that are alive in the previous gerneration and loop through all the cells where state[] includes the previous generation
 			// Inspect the cells and set the current state accordingly
-			for (const cell of this.cells.filter(cell => cell.isAlive(gen - 1))) {
-				const index = cell.getPreviousStateIndex(gen);
-				if (index + 1 < Cell.lifetime) {
-					cell.setCurrent(index + 1, gen);
-				}
-			}
+			this.cells
+				.filter((cell) => cell.isAlive(gen - 1))
+				.forEach((cell) => {
+					let index = cell.getPreviousStateIndex(gen);
+					if (index + 1 < Cell.lifetime) {
+						cell.setCurrent(index + 1, gen);
+					}
+				});
 		}
 	}
 }
@@ -87,7 +97,7 @@ function inspectCandidate(candidate, cells, voronoi, gen, threshold) {
 		// skip all neighbors that are not alive in the previous generation
 		if (cells[neighbor].isAlive(gen - 1)) {
 			sumNeighbors += 1;
-		};
+		}
 	}
 
 	if (sumNeighbors >= threshold) {
