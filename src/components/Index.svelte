@@ -3,9 +3,10 @@
 	import Board from "./../simulation/Board";
 	import * as d3 from "d3";
 	import archieml from "archieml";
-	import text from "./../data/text.txt?raw";
+	//import text from "./../data/text.txt?raw";
+	import parsed from "./../data/md.json";
 
-	const parsed = archieml.load(text);
+	//const parsed = archieml.load(text);
 
 	let w, h, y;
 	let board;
@@ -30,6 +31,7 @@
 			svg
 				.selectAll("path")
 				.data(board.cells, function (d) {
+					// Callback is used to match cells with data
 					return d.getIndex();
 				})
 				.filter(function (d) {
@@ -104,7 +106,7 @@
 		<h2>Ein Visual Essay des Kiel Science Communication Network</h2>
 	</div>
 
-	{#each parsed.text as paragraph}
+	{#each parsed.fear_frame as paragraph}
 		<div class="card-wrap">
 			<p class="card">{paragraph.value}</p>
 		</div>
@@ -155,7 +157,7 @@
 		position: relative;
 		width: 560px;
 		max-width: calc(100% - 20px);
-		margin: 30vh auto 50vh;
+		margin: 30vh auto 25vh;
 	}
 
 	.card {
