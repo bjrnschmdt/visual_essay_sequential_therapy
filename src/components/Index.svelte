@@ -47,7 +47,7 @@
 
 		let bbWrapper = d3.select(".wrapper").node().getBoundingClientRect();
 		console.log(bbWrapper.height);
-		board = new Board(innerWidth, bbWrapper.height, 500);
+		board = new Board(innerWidth, 3000, 500);
 		board.generate(startGen, numGensPerBatch);
 		board.display(ctx, scrollY, innerHeight, previousY, dampFactor);		
 
