@@ -21,7 +21,7 @@ function calcNoise(x, y, noiseScale) {
 
 export default class Cell {
 	static r = 1; // Growthrate
-	static lifetime = 32; // Scope of growth, influences tempo of growth
+	static lifetime = 24; // Scope of growth, influences tempo of growth
 	static growthExponent = 4; // Slope of growth, influences shape of growth
 	static threshold = 2; // Threshold for growth
 
@@ -91,12 +91,28 @@ export default class Cell {
 		return this.color[i];
 	}; */
 
+	/**
+	 * Returns the color of the cell for the given generation.
+	 * If the cell is alive, returns the color of the current state.
+	 * If the cell is dead, returns the color of the last state.
+	 * If the cell has never been alive, returns the color of the first state.
+	 * @param {number} gen - The generation to get the color for.
+	 * @returns {string} - The color of the cell for the given generation.
+	 */
 	getColor = (gen) => {
+		// If the cell is still being computed
+		if (this.state.length < Cell.lifetime) {
+			console.log("Cell is still being computed");
+			return this.color[0]; // Replace with your actual default color
+		}
 		return this.isAlive(gen)
-			? this.color[this.getCurrentStateIndex(gen)]
+			? // if alive, return the color of the current state
+			  this.color[this.getCurrentStateIndex(gen)]
 			: this.isDead(gen)
-			? this.color[Cell.lifetime - 1]
-			: this.color[0];
+			? // if dead, return the color of the last state
+			  this.color.slice(-1)[0]
+			: // if yet to be alive, return the color of the last state
+			  this.color[0];
 	};
 
 	setColor = (i) => {
@@ -132,15 +148,22 @@ export default class Cell {
 
 	setCurrent = (i, gen) => {
 		this.state[i] = gen;
-		this.setColor(i);
+		/* this.setColor(i); */
 	};
 
+	// Returns true if the cell is alive in the given generation, false otherwise.
 	isAlive = (gen) => {
 		return this.state.includes(gen);
 	};
 
+	// Returns true if the cell is dead in the given generation, and the cell was last alive in a previous generation.
 	isDead = (gen) => {
-		return !this.isAlive(gen) && gen > this.state.slice(-1);
+		if (this.state.length === 0) {
+			return false;
+		}
+		/* return !this.isAlive(gen) && gen > this.state.slice(-1); */
+		/* return !this.isAlive(gen) && gen > this.state[Cell.lifetime - 1]; */
+		return !this.isAlive(gen) && gen > this.state.slice(-1)[0];
 	};
 }
 

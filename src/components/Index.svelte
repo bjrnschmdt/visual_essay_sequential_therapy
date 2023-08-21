@@ -1,7 +1,6 @@
 <script>
 	import { getContext, onMount } from "svelte";
 	import Board from "./../simulation/Board";
-	import MyWorker from "./../simulation/my-worker.worker.js?worker";
 	import * as d3 from "d3";
 	import parsed from "./../data/md.json";
 	
@@ -10,20 +9,21 @@
  	let ctx;
 
 	let worker;
-	let cells = [];
 
 	let innerWidth, innerHeight, scrollX, scrollY = 0, outerHeight;
 	let board;
 	let dampFactor = 8;
-	let previousY = 1;
-	let currentY = 1;
-	let previousYReal = 0;
-	let dY = 0;
-	let dYReal = 0;
-	let inProgress = false;
+	let easeFactor = 16;
+	let genCurrent = 1;
+	let genCurrentDamped = 1;
+	let genCurrentDelta = 0;
+	let yCurrent = 1;
+	let yRealPrevious = 0;
+	let yRealDelta = 0;
+	let inProgress = true;
 
 	// Define the number of generations to generate at a time
-	const numGensPerBatch = 500;
+	const numGensPerBatch = 800;
 
 	// Define the starting generation number
 	let startGen = 1;
@@ -32,11 +32,10 @@
 	let maxScrollPos = numGensPerBatch * dampFactor; 
 
 	onMount(() => {
-		worker = new MyWorker();
-  		worker.onmessage = (event) => {
-    		cells = event.data;
-			console.log(cells);
-  		};
+
+		yCurrent = scrollY;
+		yRealPrevious = scrollY;
+		yRealDelta = scrollY;
 
 		// Get the canvas context
 		ctx = canvas.getContext("2d");
@@ -44,48 +43,56 @@
 		// Set the canvas dimensions
     	canvas.width = innerWidth;
     	canvas.height = innerHeight;
+		ctx.translate(0, -scrollY);
 
 		let bbWrapper = d3.select(".wrapper").node().getBoundingClientRect();
-		console.log(bbWrapper.height);
-		board = new Board(innerWidth, 3000, 500);
+		console.log("wrapper height: ", bbWrapper.height);
+		board = new Board(innerWidth, bbWrapper.height, 600, ctx, scrollY, innerHeight);
+		console.log("scrollY: ", scrollY);
+		console.log("innerHeight: ", innerHeight);
+		console.log("innerWidth: ", innerWidth);	
 		board.generate(startGen, numGensPerBatch);
-		board.display(ctx, scrollY, innerHeight, previousY, dampFactor);		
 
+		animate();
+			
+		/**
+ 		* Animates the board by computing the bounding box of the visible region,
+ 		* updating the previous and current Y values, and displaying the board with
+ 		* the updated Y values. If the difference between the previous and current Y
+ 		* values is less than 0.1, the animation stops.
+ 		*/
 		function animate() {
-			// Compute the bounding box of the visible region
-			const bounds = [
-      			0,
-      			scrollY,
-      			innerWidth,
-      			scrollY + innerHeight
-    		];
+			// Compute the difference between the current and previous Y values; used to dampen the scrolling
+			genCurrent = scrollY / dampFactor;
+			genCurrentDelta = genCurrent - genCurrentDamped;
+			genCurrentDamped += genCurrentDelta / easeFactor;
 
-			dY = currentY - previousY;
-			previousY += dY / 16;
-
-			dYReal = scrollY - previousYReal;
-			previousYReal += dYReal;
+			// Compute the difference between the current and previous real Y values; used to translate the canvas
+			yRealDelta = yCurrent - yRealPrevious;
+			yRealPrevious += yRealDelta;
 				
-			board.display(ctx, scrollY, innerHeight, previousY, dampFactor);
+			// Display the board with the updated Y values
+			board.display(ctx, yCurrent, innerHeight, genCurrent, genCurrentDamped);
 
-			if (Math.abs(dY) < 0.1) {
+			if (Math.abs(genCurrentDelta) < 0.1) {
 				inProgress = false;
-				/* let visible = board.getVisible( scrollY, innerHeight);
-				console.log(visible.length , visible.filter(d => d.state.length > 0).length); */
 				return;
 			}
-			ctx.translate(0, -dYReal);
+
+			// Translate the canvas to adjust for the scrolling
+			ctx.translate(0, -yRealDelta);
+
+			// Request the next animation frame
 			window.requestAnimationFrame(animate);
 		}
 		
 		d3.select(window).on("scroll", function () {
 			// Update polygons on scroll
-			currentY = scrollY;
+			yCurrent = scrollY;
 			if (!inProgress) {
 				inProgress = true;
 				animate();
 			}
-			//console.log("scrolling: " + y);
 
 			// If the user has scrolled to the bottom of the page, generate the next batch of generations
 			/* if (y + 100 >= maxScrollPos) {
@@ -94,12 +101,19 @@
   			board.generate(startGen, numGensPerBatch);
 			} */
 		});
+
+		d3.select(window).on("beforeunload", function () {
+			// Close the worker thread
+			worker.terminate();
+
+		});
 	});
 
 	function updateCanvasSize() {
     canvas.width = innerWidth;
     canvas.height = innerHeight;
   	}
+
 
 </script>
 
@@ -118,7 +132,9 @@
 	{/each}
 </div>
 
-<svelte:window bind:scrollX={scrollX} bind:scrollY={scrollY} bind:innerWidth={innerWidth} bind:innerHeight={innerHeight} bind:outerHeight={outerHeight}/>
+
+<svelte:window bind:scrollX={scrollX} bind:scrollY={scrollY} bind:innerWidth={innerWidth} bind:innerHeight={innerHeight} bind:outerHeight={outerHeight} />
+
 
 <style>
 	h1 {

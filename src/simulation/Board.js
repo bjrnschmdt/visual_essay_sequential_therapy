@@ -9,13 +9,23 @@ function dist(x1, y1, x2, y2) {
 }
 
 export default class Board {
-	constructor(width_ = 500, height_ = 500, numGenerations) {
+	constructor(
+		width_ = 500,
+		height_ = 500,
+		numGenerations,
+		ctx,
+		scrollY,
+		innerHeight
+	) {
 		this.listeners = new Map();
 		this.threshold = 2;
 		this.numGenerations = numGenerations;
 		this.radius = 16;
 		this.width = width_;
 		this.height = height_;
+		this.ctx = ctx;
+		this.scrollY = scrollY;
+		this.innerHeight = innerHeight;
 
 		this.points = [
 			...poissonDiscSampler(0, 0, this.width, this.height, this.radius)
@@ -27,12 +37,12 @@ export default class Board {
 			this.width - 0.5,
 			this.height - 0.5
 		]);
-		this.cells = new Array(this.points.length);
 		this.cellsData = [];
 		this.livingCells = [];
 		this.livingCellsNeighbors = [];
 		this.generations = new Array(this.numGenerations);
-		//this.index;
+		this.latestGen = 0;
+		this.latestGenDamped = 0;
 		this.init();
 	}
 
@@ -44,9 +54,16 @@ export default class Board {
 			const { type, data } = event.data;
 			switch (type) {
 				case "updateCells":
-					const { cellsData } = data;
-					this.cellsData = cellsData;
-					//console.log(this.cellsData);
+					const { batchUpdates, gen } = data;
+					this.latestGen = gen;
+					for (let updatedCellData of batchUpdates) {
+						this.cellsData[updatedCellData.index] = updatedCellData;
+					}
+					break;
+				case "setInitialCellsData":
+					this.cellsData = data;
+					// Here I try to render the initial state by calling the displayInitial function
+					this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
 					break;
 				default:
 					console.error(`Unknown message type: ${type}`);
@@ -77,6 +94,11 @@ export default class Board {
 			type: "initCell",
 			data: { startIndex: this.index }
 		});
+
+		// display initial state
+		this.worker.postMessage({
+			type: "getInitialCellsData"
+		});
 	};
 
 	generate = (startGen, numGens) => {
@@ -86,8 +108,14 @@ export default class Board {
 		});
 	};
 
-	display = (ctx, scrollY, innerHeight, previousY, dampFactor) => {
-		//console.log("display");
+	display = (ctx, scrollY, innerHeight, currentGen, currentGenDamped) => {
+		this.latestGenDamped = updateGen(
+			d3.min([this.latestGen, currentGen]),
+			this.latestGenDamped
+		);
+
+		const gen = d3.min([currentGenDamped, this.latestGenDamped]);
+
 		for (const cell of this.getVisibleCells(
 			this.cellsData,
 			scrollY,
@@ -95,14 +123,28 @@ export default class Board {
 		)) {
 			ctx.beginPath();
 			this.voronoi.renderCell(cell.index, ctx);
-			ctx.lineWidth = 1;
 			ctx.strokeStyle = d3
-				.color(getColor(cell, Math.round(previousY / dampFactor)))
+				.color(getColor(cell, Math.round(gen)))
 				.brighter()
 				.formatRgb();
 			ctx.stroke();
-			ctx.fillStyle = getColor(cell, Math.round(previousY / dampFactor));
-			//ctx.fillStyle = d3.color(d.getColor(0));
+			ctx.fillStyle = getColor(cell, Math.round(gen));
+			ctx.fill();
+			ctx.closePath();
+		}
+	};
+
+	displayInitial = (ctx, scrollY, innerHeight) => {
+		for (const cell of this.getVisibleCells(
+			this.cellsData,
+			scrollY,
+			innerHeight
+		)) {
+			ctx.beginPath();
+			this.voronoi.renderCell(cell.index, ctx);
+			ctx.strokeStyle = d3.color(cell.color[0]).brighter().formatRgb();
+			ctx.stroke();
+			ctx.fillStyle = cell.color[0];
 			ctx.fill();
 			ctx.closePath();
 		}
@@ -145,9 +187,10 @@ function isDead(cell, gen) {
 	if (cell.state.length === 0) {
 		return false;
 	}
-	return /* !isAlive(cell, gen) && */ gen > cell.state.slice(-1);
+	return gen > cell.state[cell.state.length - 1];
 }
 
-function isNotYetAlive(cell, gen) {
-	return /* !isAlive(cell, gen) && */ gen < cell.state.slice(-1);
+function updateGen(currentGen, previousGenDamped) {
+	const dGenDamped = currentGen - previousGenDamped;
+	return (previousGenDamped += dGenDamped / 16);
 }
