@@ -3,6 +3,8 @@ import * as d3 from "d3";
 import { Delaunay } from "d3-delaunay";
 import { poissonDiscSampler } from "./poissonDiscSampler";
 import MyWorker from "./../simulation/my-worker.worker.js?worker";
+import { Poline } from "poline";
+import { formatRgb } from "culori";
 
 function dist(x1, y1, x2, y2) {
 	return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
@@ -15,7 +17,8 @@ export default class Board {
 		numGenerations,
 		ctx,
 		scrollY,
-		innerHeight
+		innerHeight,
+		boundingBoxes
 	) {
 		this.listeners = new Map();
 		this.threshold = 2;
@@ -43,10 +46,13 @@ export default class Board {
 		this.generations = new Array(this.numGenerations);
 		this.latestGen = 0;
 		this.latestGenDamped = 0;
+		this.boundingBoxes = boundingBoxes;
+		this.numIntervals = boundingBoxes.length;
 		this.init();
 	}
 
 	init = () => {
+		const interval = this.height / this.numIntervals;
 		// Create a new worker
 		this.worker = new MyWorker();
 		// Set up the message handler for the worker
@@ -62,6 +68,8 @@ export default class Board {
 					break;
 				case "setInitialCellsData":
 					this.cellsData = data;
+					this.mediumCounts = this.getMediumCounts(this.cellsData);
+					console.log("board mediumCounts:", this.mediumCounts);
 					// Here I try to render the initial state by calling the displayInitial function
 					this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
 					break;
@@ -70,18 +78,45 @@ export default class Board {
 			}
 		};
 
+		this.poline = new Poline({
+			numPoints: this.numIntervals,
+			anchorColors: [
+				[0, 1.0, 1.0],
+				[0, 1.0, 0.5]
+				//... more colors
+			]
+		});
+
+		/* console.log(this.poline.colors); */
+
+		// Convert Poline colors to RGB format
+		this.RgbColors = [...this.poline.colors].map((c) =>
+			formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2] })
+		);
+
+		//console.log(this.RgbColors);
+
 		// Populate array with cells
-		for (let i = 0; i < this.points.length; i++) {
+		for (const [i, [x, y]] of this.points.entries()) {
 			const polygon = this.voronoi.cellPolygon(i);
 			const neighbors = [...this.voronoi.neighbors(i)];
+			let color;
+			for (let j = 0; j < this.boundingBoxes.length; j++) {
+				const { top, height } = this.boundingBoxes[j];
+				if (y >= top && y < top + height) {
+					color = this.RgbColors[j];
+					break;
+				}
+			}
 			this.worker.postMessage({
 				type: "addCell",
 				data: {
-					x: this.points[i][0],
-					y: this.points[i][1],
+					x: x,
+					y: y,
 					index: i,
 					polygon: polygon,
-					neighbors: neighbors
+					neighbors: neighbors,
+					medium: color
 				}
 			});
 		}
@@ -91,7 +126,7 @@ export default class Board {
 		// Set state[0] of neighbors to generation 0 which means that this cell is at step 0 in generation 0
 		this.index = this.delaunay.find(Math.random() * 2000, 0);
 		this.worker.postMessage({
-			type: "initCell",
+			type: "initCells",
 			data: { startIndex: this.index }
 		});
 
@@ -102,9 +137,14 @@ export default class Board {
 	};
 
 	generate = (startGen, numGens) => {
+		console.log("board generate mediumCount:", this.mediumCounts);
 		this.worker.postMessage({
 			type: "generate",
-			data: { startGen: startGen, numGens: numGens }
+			data: {
+				startGen: startGen,
+				numGens: numGens,
+				mediumCounts: this.mediumCounts
+			}
 		});
 	};
 
@@ -164,6 +204,17 @@ export default class Board {
 			);
 		});
 		return visibleCells;
+	};
+
+	getMediumCounts = (cells) => {
+		const count = cells.reduce((acc, cell) => {
+			if (!acc[cell.medium]) {
+				acc[cell.medium] = 0;
+			}
+			acc[cell.medium]++;
+			return acc;
+		}, {});
+		return count;
 	};
 }
 

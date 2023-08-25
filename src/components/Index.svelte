@@ -2,17 +2,23 @@
 	import { getContext, onMount } from "svelte";
 	import Board from "./../simulation/Board";
 	import * as d3 from "d3";
+	import { color } from "d3-color";
 	import parsed from "./../data/md.json";
-	
+	import { Poline, positionFunctions } from "poline";
+	import { formatRgb } from "culori";
 
 	let canvas;
- 	let ctx;
+	let ctx;
 
 	let worker;
 
-	let innerWidth, innerHeight, scrollX, scrollY = 0, outerHeight;
+	let innerWidth,
+		innerHeight,
+		scrollX,
+		scrollY = 0,
+		outerHeight;
 	let board;
-	let dampFactor = 8;
+	let dampFactor = 9;
 	let easeFactor = 16;
 	let genCurrent = 1;
 	let genCurrentDamped = 1;
@@ -21,6 +27,9 @@
 	let yRealPrevious = 0;
 	let yRealDelta = 0;
 	let inProgress = true;
+	let poline;
+	let rgbColors = [];
+	let d3Colors = [];
 
 	// Define the number of generations to generate at a time
 	const numGensPerBatch = 800;
@@ -29,9 +38,31 @@
 	let startGen = 1;
 
 	/* const maxScrollHeight = document.body.scrollHeight; */
-	let maxScrollPos = numGensPerBatch * dampFactor; 
+	let maxScrollPos = numGensPerBatch * dampFactor;
+
+	let cardWraps = [];
+
+	poline = new Poline({
+		numPoints: parsed.fear_frame.length,
+		/* positionFunction: positionFunctions.exponentialPosition, */
+		anchorColors: [
+			[0, 1.0, 1.0],
+			[0, 1.0, 0.5]
+			//... more colors
+		]
+	});
+
+	// Convert Poline colors to RGB format
+	rgbColors = [...poline.colors].map((c) =>
+		formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2], alpha: 0.35 })
+	);
+
+	// Convert rgbColors to d3.color format
+	d3Colors = [...rgbColors].map((c) => color(c));
 
 	onMount(() => {
+		cardWraps = document.querySelectorAll(".card-wrap");
+		const boundingBoxes = getBoundingBoxes();
 
 		yCurrent = scrollY;
 		yRealPrevious = scrollY;
@@ -41,26 +72,32 @@
 		ctx = canvas.getContext("2d");
 
 		// Set the canvas dimensions
-    	canvas.width = innerWidth;
-    	canvas.height = innerHeight;
+		canvas.width = innerWidth;
+		canvas.height = innerHeight;
 		ctx.translate(0, -scrollY);
 
 		let bbWrapper = d3.select(".wrapper").node().getBoundingClientRect();
-		console.log("wrapper height: ", bbWrapper.height);
-		board = new Board(innerWidth, bbWrapper.height, 600, ctx, scrollY, innerHeight);
-		console.log("scrollY: ", scrollY);
-		console.log("innerHeight: ", innerHeight);
-		console.log("innerWidth: ", innerWidth);	
+		/* console.log("wrapper height: ", bbWrapper.height); */
+		board = new Board(
+			innerWidth,
+			bbWrapper.height,
+			600,
+			ctx,
+			scrollY,
+			innerHeight,
+			boundingBoxes
+		);
+
 		board.generate(startGen, numGensPerBatch);
 
 		animate();
-			
+
 		/**
- 		* Animates the board by computing the bounding box of the visible region,
- 		* updating the previous and current Y values, and displaying the board with
- 		* the updated Y values. If the difference between the previous and current Y
- 		* values is less than 0.1, the animation stops.
- 		*/
+		 * Animates the board by computing the bounding box of the visible region,
+		 * updating the previous and current Y values, and displaying the board with
+		 * the updated Y values. If the difference between the previous and current Y
+		 * values is less than 0.1, the animation stops.
+		 */
 		function animate() {
 			// Compute the difference between the current and previous Y values; used to dampen the scrolling
 			genCurrent = scrollY / dampFactor;
@@ -70,7 +107,7 @@
 			// Compute the difference between the current and previous real Y values; used to translate the canvas
 			yRealDelta = yCurrent - yRealPrevious;
 			yRealPrevious += yRealDelta;
-				
+
 			// Display the board with the updated Y values
 			board.display(ctx, yCurrent, innerHeight, genCurrent, genCurrentDamped);
 
@@ -85,7 +122,7 @@
 			// Request the next animation frame
 			window.requestAnimationFrame(animate);
 		}
-		
+
 		d3.select(window).on("scroll", function () {
 			// Update polygons on scroll
 			yCurrent = scrollY;
@@ -105,38 +142,94 @@
 		d3.select(window).on("beforeunload", function () {
 			// Close the worker thread
 			worker.terminate();
-
 		});
 	});
 
 	function updateCanvasSize() {
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
-  	}
+		canvas.width = innerWidth;
+		canvas.height = innerHeight;
+	}
 
+	function getBoundingBoxes() {
+		const boundingBoxes = [];
+		cardWraps.forEach((cardWrap) => {
+			const boundingBox = {
+				top: cardWrap.offsetTop,
+				height: cardWrap.offsetHeight
+			};
+			boundingBoxes.push(boundingBox);
+		});
+		return boundingBoxes;
+	}
 
+	function nthTerm(n) {
+		let value = 0.5 * Math.pow(1.5, n - 1);
+		return value.toFixed(1);
+	}
+
+	function interpolate(x, y1 = 0.5, y2 = 40, x1 = 1, x2 = 24, p = 2) {
+		let value = y1 + (y2 - y1) * Math.pow((x - x1) / (x2 - x1), p);
+		return value.toFixed(1);
+	}
 </script>
 
-<canvas bind:this={canvas}></canvas>
+<canvas bind:this="{canvas}"></canvas>
 <div class="wrapper">
-	
-	<div class="card-wrap">
+	<div class="h1-wrap">
 		<h1>{parsed.h1}</h1>
 		<h2>Ein Visual Essay des Kiel Science Communication Network</h2>
 	</div>
 
-	{#each parsed.fear_frame as paragraph}
-		<div class="card-wrap">
+	{#each parsed.fear_frame as paragraph, index}
+		<div
+			class="card-wrap"
+			style="border-image-source: linear-gradient(
+				to right,
+				rgba(255, 0, 0, 0) 0%,
+				{((d3Colors[index].opacity = 0.35), d3Colors[index].formatRgb())} 5%,
+				{d3Colors[index].formatRgb()} 95%,
+				rgba(255, 0, 0, 0) 100%
+			)"
+		>
+			<p
+				class="info"
+				style="color: {d3Colors[index].formatRgb()}; border-color: {d3Colors[
+					index
+				].formatRgb()}; background: {((d3Colors[index].opacity = 0.1),
+				d3Colors[index].formatRgb())};"
+			>
+				P.aeruginosa | Tag {index.toString().padStart(2, "0")} | Antibiotikakonzentration
+				{interpolate(index + 1)}x | Population 0.24
+			</p>
 			<p class="card">{paragraph.value}</p>
 		</div>
+		<!-- <hr/> -->
 	{/each}
 </div>
 
-
-<svelte:window bind:scrollX={scrollX} bind:scrollY={scrollY} bind:innerWidth={innerWidth} bind:innerHeight={innerHeight} bind:outerHeight={outerHeight} />
-
+<svelte:window
+	bind:scrollX="{scrollX}"
+	bind:scrollY="{scrollY}"
+	bind:innerWidth="{innerWidth}"
+	bind:innerHeight="{innerHeight}"
+	bind:outerHeight="{outerHeight}"
+/>
 
 <style>
+	.h1-wrap {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+		align-items: center;
+		z-index: 1;
+		position: relative;
+		width: 560px;
+		/* width: 100%; */
+		max-width: calc(100% - 20px);
+		/* margin: 30vh auto 25vh; */
+		/* padding: 0 0 64px; */
+		margin: 256px auto;
+	}
 	h1 {
 		font-family: "Golos Text";
 		font-weight: 700;
@@ -170,24 +263,27 @@
 	}
 
 	canvas {
-  		position: fixed;
-  		top: 0;
-  		left: 0;
-  		z-index: -1;
-  		width: 100%;
-  		height: 100%;
+		position: fixed;
+		top: 0;
+		left: 0;
+		z-index: -1;
+		width: 100%;
+		height: 100%;
 	}
 
 	.card-wrap {
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
-		align-items: flex-start;
+		justify-content: flex-start;
+		align-items: center;
 		z-index: 1;
 		position: relative;
 		width: 560px;
+		/* width: 100%; */
 		max-width: calc(100% - 20px);
-		margin: 30vh auto 25vh;
+		/* margin: 30vh auto 25vh; */
+		padding: 0 0 64px;
+		margin: auto;
 	}
 
 	.card {
@@ -195,9 +291,29 @@
 		backdrop-filter: saturate(180%) blur(10px);
 		-webkit-backdrop-filter: saturate(180%) blur(10px);
 		padding: 18px 24px;
+		margin-top: 20px;
 		color: black;
 		max-width: 560px;
 		border-radius: 4px;
 		box-shadow: 0 0 20px -10px black;
+	}
+
+	.info {
+		width: 560px;
+		background: rgba(255, 0, 0, 0.1);
+		backdrop-filter: saturate(70%) blur(10px);
+		-webkit-backdrop-filter: saturate(70%) blur(10px);
+		font-family: "Share Tech Mono", monospace;
+		font-size: small;
+		padding: 2px 24px 1px;
+		color: rgba(255, 0, 0, 0.35);
+		margin-top: 0;
+		margin-bottom: 36px;
+		border-style: solid;
+		border-width: 1px;
+		border-color: rgba(255, 0, 0, 0.35);
+		border-radius: 4px;
+		/* border-bottom-left-radius: 8px;
+		border-bottom-right-radius: 8px; */
 	}
 </style>

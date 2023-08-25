@@ -25,12 +25,13 @@ export default class Cell {
 	static growthExponent = 4; // Slope of growth, influences shape of growth
 	static threshold = 2; // Threshold for growth
 
-	constructor(x_, y_, index, polygon_, neighbors_) {
+	constructor(x_, y_, index, polygon_, neighbors_, medium_) {
 		this.x = x_;
 		this.y = y_;
 		this.index = index;
 		this.polygon = polygon_;
 		this.neighbors = neighbors_;
+		this.medium = medium_;
 		this.state = []; // State of the cell per step in lifetime
 		this.color = []; // Color of the cell per step in lifetime
 		this.noiseBaseScale = 0.001; // Scale of the perlin noise of the antibiotic medium
@@ -40,7 +41,8 @@ export default class Cell {
 		this.noiseBase = calcNoise(this.x, this.y, this.noiseBaseScale); // Perlin noise of the antibiotic medium
 		this.noiseBact = calcNoise(this.x, this.y, this.noiseBactScale); // Perlin noise of the bacteria
 		this.colorBase = rgb(105, 105, 105); // Initial color of the antibiotic medium
-		this.colorBact = rgb(255, 0, 0); // Initial color of the bacteria
+		/* this.colorBact = rgb(255, 0, 0); */ // Initial color of the bacteria
+		this.colorBact = rgb(medium_);
 		this.colorBaseComp = multiplyRgb(
 			this.colorBase,
 			this.noiseBase,
