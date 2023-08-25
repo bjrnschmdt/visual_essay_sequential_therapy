@@ -2,5 +2,7 @@
 	"useTabs": true,
 	"trailingComma": "none",
 	"printWidth": 80,
-	"svelteSortOrder": "options-scripts-markup-styles"
+	"svelteSortOrder": "options-scripts-markup-styles",
+	"plugins": ["prettier-plugin-svelte"],
+	"svelteStrictMode": true
 }
