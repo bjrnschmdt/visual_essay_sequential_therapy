@@ -21,7 +21,6 @@
 	const content = { h1, text };
 	const { title, description, url, keywords } = copy;
 	const showGraphics = true;
-
 	setContext("copy", copy);
 	setContext("data", data.data);
 </script>

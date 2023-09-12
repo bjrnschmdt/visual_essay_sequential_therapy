@@ -3,9 +3,12 @@
 	import Board from "./../simulation/Board";
 	import * as d3 from "d3";
 	import { color } from "d3-color";
-	import parsed from "./../data/md.json";
+	/* import parsed from "./../data/md.json"; */
 	import { Poline, positionFunctions } from "poline";
 	import { formatRgb } from "culori";
+
+	export let content;
+	export let showGraphics;
 
 	let canvas;
 	let ctx;
@@ -43,7 +46,7 @@
 	let cardWraps = [];
 
 	poline = new Poline({
-		numPoints: parsed.fear_frame.length,
+		numPoints: content.text.length,
 		/* positionFunction: positionFunctions.exponentialPosition, */
 		anchorColors: [
 			[0, 1.0, 1.0],
@@ -61,6 +64,7 @@
 	d3Colors = [...rgbColors].map((c) => color(c));
 
 	onMount(() => {
+		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
 		cardWraps = document.querySelectorAll(".card-wrap");
 		const boundingBoxes = getBoundingBoxes();
 
@@ -176,11 +180,11 @@
 <canvas bind:this="{canvas}"></canvas>
 <div class="wrapper">
 	<div class="h1-wrap">
-		<h1>{parsed.h1}</h1>
+		<h1>{content.h1}</h1>
 		<h2>Ein Visual Essay des Kiel Science Communication Network</h2>
 	</div>
 
-	{#each parsed.fear_frame as paragraph, index}
+	{#each content.text as paragraph, index}
 		<div
 			class="card-wrap"
 			style="border-image-source: linear-gradient(
@@ -191,16 +195,18 @@
 				rgba(255, 0, 0, 0) 100%
 			)"
 		>
-			<p
-				class="info"
-				style="color: {d3Colors[index].formatRgb()}; border-color: {d3Colors[
-					index
-				].formatRgb()}; background: {((d3Colors[index].opacity = 0.1),
-				d3Colors[index].formatRgb())};"
-			>
-				P.aeruginosa | Tag {index.toString().padStart(2, "0")} | Antibiotikakonzentration
-				{interpolate(index + 1)}x | Population 0.24
-			</p>
+			{#if showGraphics}
+				<p
+					class="info"
+					style="color: {d3Colors[index].formatRgb()}; border-color: {d3Colors[
+						index
+					].formatRgb()}; background: {((d3Colors[index].opacity = 0.1),
+					d3Colors[index].formatRgb())};"
+				>
+					P.aeruginosa | Tag {index.toString().padStart(2, "0")} | Antibiotikakonzentration
+					{interpolate(index + 1)}x | Population 0.24
+				</p>
+			{/if}
 			<p class="card">{paragraph.value}</p>
 		</div>
 		<!-- <hr/> -->
@@ -216,19 +222,23 @@
 />
 
 <style>
+	canvas {
+		background-color: rgb(25, 25, 25);
+	}
 	.h1-wrap {
 		display: flex;
 		flex-direction: column;
-		justify-content: flex-start;
+		justify-content: center;
 		align-items: center;
 		z-index: 1;
 		position: relative;
-		width: 560px;
+		/* width: 560px; */
 		/* width: 100%; */
 		max-width: calc(100% - 20px);
 		/* margin: 30vh auto 25vh; */
 		/* padding: 0 0 64px; */
-		margin: 256px auto;
+		/* margin: 256px auto; */
+		height: 100vh;
 	}
 	h1 {
 		font-family: "Golos Text";
@@ -237,7 +247,7 @@
 		font-size: var(--56px);
 		z-index: 99;
 		color: white;
-		width: 100%;
+		width: 560px;
 		text-align: left;
 	}
 
@@ -248,7 +258,7 @@
 		font-size: var(--18px);
 		z-index: 99;
 		color: white;
-		width: 100%;
+		width: 560px;
 		text-align: left;
 	}
 
