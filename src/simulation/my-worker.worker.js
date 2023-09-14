@@ -32,7 +32,7 @@ onmessage = (event) => {
 				medium: medium
 			});
 			break;
-		case "initCell":
+		/* case "initCell":
 			const { startIndex } = data;
 			cells[startIndex].setCurrent(1, 0);
 			aliveCellIndizes.add(startIndex);
@@ -40,8 +40,15 @@ onmessage = (event) => {
 				cells[neighborIndex].setCurrent(0, 0);
 				candidateCellIndizes.add(neighborIndex);
 			}
-			break;
+			break; */
 		case "initCells":
+			/* const { startIndex } = data;
+			cells[startIndex].setCurrent(1, 0);
+			aliveCellIndizes.add(startIndex);
+			for (const neighborIndex of cells[startIndex].neighbors) {
+				cells[neighborIndex].setCurrent(0, 0);
+				candidateCellIndizes.add(neighborIndex);
+			} */
 			initCellBands(cells);
 			break;
 		case "getInitialCellsData":
@@ -74,11 +81,11 @@ function initCellBands(cells) {
 	}, {});
 
 	const bottommostCells = cells.reduce((acc, cell) => {
-		// If the current cell's color is not in the accumulator object, add it with the current cell as the topmost cell
+		// If the current cell's color is not in the accumulator object, add it with the current cell as the bottommost cell
 		if (!acc[cell.medium]) {
 			acc[cell.medium] = cell;
 		}
-		// If the current cell's y-coordinate is higher than the topmost cell's y-coordinate for the current color, update the topmost cell
+		// If the current cell's y-coordinate is lower than the bottommost cell's y-coordinate for the current color, update the bottommost cell
 		else if (cell.boundingBox.maxY > acc[cell.medium].boundingBox.maxY) {
 			acc[cell.medium] = cell;
 		}
@@ -86,21 +93,44 @@ function initCellBands(cells) {
 	}, {});
 
 	for (const [index, cell] of Object.entries(topmostCells)) {
-		const damp = 10;
+		const damp = 11.5;
+		const offset = -30;
 		// Set the topmost cell's state to 1
-		cell.setCurrent(1, Math.floor(cell.boundingBox.minY / damp));
+		cell.setCurrent(1, Math.floor(cell.boundingBox.minY / damp) + offset);
 		aliveCellIndizes.add(cell.index);
 		// Set the topmost cell's neighbors' state to 0
 		for (const neighborIndex of cell.neighbors) {
 			if (cells[neighborIndex].medium === cell.medium) {
 				cells[neighborIndex].setCurrent(
 					0,
-					Math.floor(cell.boundingBox.minY / damp)
+					Math.floor(cell.boundingBox.minY / damp) + offset
 				);
 				candidateCellIndizes.add(neighborIndex);
+				//aliveCellIndizes.add(neighborIndex); // optional?
 			}
 		}
 	}
+
+	/* for (const [index, cell] of Object.entries(bottommostCells)) {
+		const damp = 10.973838195386703;
+		const offset = 0;
+		// Set the topmost cell's state to 1
+		cell.setCurrent(1, Math.floor((cell.boundingBox.maxY + offset) / damp));
+		aliveCellIndizes.add(cell.index);
+		// Set the topmost cell's neighbors' state to 0
+		for (const neighborIndex of cell.neighbors) {
+			if (cells[neighborIndex].medium !== cell.medium) {
+				cells[neighborIndex].setCurrent(
+					0,
+					Math.floor((cell.boundingBox.maxY + offset) / damp)
+				);
+				candidateCellIndizes.add(neighborIndex);
+				//aliveCellIndizes.add(neighborIndex); // optional?
+				//cellsData[neighborIndex].state[0] = gen;
+				//cellsData[neighborIndex].color[0] = candidate.color[0];
+			}
+		}
+	} */
 }
 
 function generate(startGen, numGens, mediumCounts) {
@@ -130,6 +160,13 @@ function generate(startGen, numGens, mediumCounts) {
 					);
 				}
 			}
+
+			/* inspectCandidate(
+				cells[candidateCellIndex],
+				gen,
+				newCandidateCellIndizes,
+				newAliveCellIndizes
+			); */
 		}
 
 		// Filter for cells that are alive in the previous gerneration and loop through all the cells where state[] includes the previous generation
@@ -172,6 +209,21 @@ function generate(startGen, numGens, mediumCounts) {
 			batchCounter = 0;
 		}
 
+		if (gen < 1) {
+			/* console.log("aliveCellIndizes:", aliveCellIndizes); */
+			/* const yPositions = getBottommostCells(aliveCellIndizes, cells).map(
+				(cell) => {
+					return cell.y;
+				}
+			); */
+			const bottommostCells = getBottommostCells(aliveCellIndizes, cells);
+			const yValues = Object.values(bottommostCells).map((cell) => cell.y);
+			const yMin = Math.min(...yValues);
+			/* console.log("yValues:", yValues);
+			console.log("yMin:", yMin); */
+			console.log("quotient", yMin, gen, yMin / gen);
+		}
+
 		// Update the main sets
 		aliveCellIndizes = newAliveCellIndizes;
 		candidateCellIndizes = newCandidateCellIndizes;
@@ -207,3 +259,35 @@ function inspectCandidate(
 }
 
 export {};
+
+/* const getBottommostCellYPos = (set) => {
+	const maxY = Math.max(
+		...Array.from(set).map((cellIndex) => cells[cellIndex].y)
+	);
+	return maxY;
+}; */
+
+/* const getBottommostCellYPos = (set) => {
+	const maxY = Array.from(set).reduce((acc, cellIndex) => {
+		console.log("acc:", acc);
+		const cellY = cells[cellIndex].y;
+		return cellY > acc ? cellY : acc;
+	}, -Infinity);
+	return maxY;
+}; */
+
+const getBottommostCells = (set, cells) => {
+	const bottommostCells = Array.from(set).reduce((acc, cellIndex) => {
+		const cell = cells[cellIndex];
+		// If the current cell's color is not in the accumulator object, add it with the current cell as the bottommost cell
+		if (!acc[cell.medium]) {
+			acc[cell.medium] = cell;
+		}
+		// If the current cell's y-coordinate is lower than the bottommost cell's y-coordinate for the current color, update the bottommost cell
+		else if (cell.boundingBox.maxY > acc[cell.medium].boundingBox.maxY) {
+			acc[cell.medium] = cell;
+		}
+		return acc;
+	}, {});
+	return bottommostCells;
+};

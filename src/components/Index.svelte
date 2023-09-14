@@ -21,7 +21,8 @@
 		scrollY = 0,
 		outerHeight;
 	let board;
-	let dampFactor = 9;
+	let dampFactor = 11.5;
+	/* let dampFactor = 5.5; */
 	let easeFactor = 16;
 	let genCurrent = 1;
 	let genCurrentDamped = 1;
@@ -35,38 +36,50 @@
 	let d3Colors = [];
 
 	// Define the number of generations to generate at a time
-	const numGensPerBatch = 800;
+	const numGensPerBatch = 1000;
 
 	// Define the starting generation number
-	let startGen = 1;
+	let startGen = -30;
 
 	/* const maxScrollHeight = document.body.scrollHeight; */
 	let maxScrollPos = numGensPerBatch * dampFactor;
 
 	let cardWraps = [];
 
-	poline = new Poline({
-		numPoints: content.text.length,
-		/* positionFunction: positionFunctions.exponentialPosition, */
-		anchorColors: [
-			[0, 1.0, 1.0],
-			[0, 1.0, 0.5]
-			//... more colors
-		]
-	});
-
-	// Convert Poline colors to RGB format
-	rgbColors = [...poline.colors].map((c) =>
-		formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2], alpha: 0.35 })
-	);
-
-	// Convert rgbColors to d3.color format
-	d3Colors = [...rgbColors].map((c) => color(c));
-
 	onMount(() => {
 		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
 		cardWraps = document.querySelectorAll(".card-wrap");
+		console.log("cardWraps: ", cardWraps.length);
 		const boundingBoxes = getBoundingBoxes();
+
+		poline = new Poline({
+			numPoints: boundingBoxes.length - 2,
+			/* positionFunction: positionFunctions.exponentialPosition, */
+			anchorColors: [
+				[0, 1.0, 1.0],
+				[0, 1.0, 0.5]
+				//... more colors
+			]
+		});
+
+		// Convert Poline colors to RGB format
+		rgbColors = [...poline.colors].map((c) =>
+			formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2], alpha: 0.35 })
+		);
+
+		console.log("rgbColors: ", rgbColors.length);
+		console.log("content.text: ", content.text.length);
+
+		// Convert rgbColors to d3.color format
+		d3Colors = [...rgbColors].map((c) => color(c));
+
+		d3.selectAll(".info")
+			.style("color", (d, i) => d3Colors[i + 1].formatRgb())
+			.style("border-color", (d, i) => d3Colors[i + 1].formatRgb())
+			.style("background", (d, i) => {
+				d3Colors[i + 1].opacity = 0.1;
+				return d3Colors[i + 1].formatRgb();
+			});
 
 		yCurrent = scrollY;
 		yRealPrevious = scrollY;
@@ -89,7 +102,8 @@
 			ctx,
 			scrollY,
 			innerHeight,
-			boundingBoxes
+			boundingBoxes,
+			rgbColors
 		);
 
 		board.generate(startGen, numGensPerBatch);
@@ -156,13 +170,18 @@
 
 	function getBoundingBoxes() {
 		const boundingBoxes = [];
-		cardWraps.forEach((cardWrap) => {
+		const parentElement = document.querySelector(".wrapper");
+		/* console.log("parentElement: ", parentElement); */
+		console.log("children: ", parentElement.children);
+
+		[...parentElement.children].forEach((childElement) => {
 			const boundingBox = {
-				top: cardWrap.offsetTop,
-				height: cardWrap.offsetHeight
+				top: childElement.offsetTop,
+				height: childElement.offsetHeight
 			};
 			boundingBoxes.push(boundingBox);
 		});
+		console.log("boundingBoxes: ", boundingBoxes);
 		return boundingBoxes;
 	}
 
@@ -185,24 +204,9 @@
 	</div>
 
 	{#each content.text as paragraph, index}
-		<div
-			class="card-wrap"
-			style="border-image-source: linear-gradient(
-				to right,
-				rgba(255, 0, 0, 0) 0%,
-				{((d3Colors[index].opacity = 0.35), d3Colors[index].formatRgb())} 5%,
-				{d3Colors[index].formatRgb()} 95%,
-				rgba(255, 0, 0, 0) 100%
-			)"
-		>
+		<div class="card-wrap">
 			{#if showGraphics}
-				<p
-					class="info"
-					style="color: {d3Colors[index].formatRgb()}; border-color: {d3Colors[
-						index
-					].formatRgb()}; background: {((d3Colors[index].opacity = 0.1),
-					d3Colors[index].formatRgb())};"
-				>
+				<p class="info">
 					P.aeruginosa | Tag {index.toString().padStart(2, "0")} | Antibiotikakonzentration
 					{interpolate(index + 1)}x | Population 0.24
 				</p>
@@ -267,7 +271,7 @@
 		line-height: 1.6;
 	}
 
-	.wrapper {
+	#wrapper {
 		position: absolute;
 		width: 100%;
 	}

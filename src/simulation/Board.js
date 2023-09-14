@@ -5,6 +5,7 @@ import { poissonDiscSampler } from "./poissonDiscSampler";
 import MyWorker from "./../simulation/my-worker.worker.js?worker";
 import { Poline } from "poline";
 import { formatRgb } from "culori";
+/* const fs = require("fs"); */
 
 function dist(x1, y1, x2, y2) {
 	return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
@@ -18,7 +19,8 @@ export default class Board {
 		ctx,
 		scrollY,
 		innerHeight,
-		boundingBoxes
+		boundingBoxes,
+		RgbColors
 	) {
 		this.listeners = new Map();
 		this.threshold = 2;
@@ -48,6 +50,7 @@ export default class Board {
 		this.latestGenDamped = 0;
 		this.boundingBoxes = boundingBoxes;
 		this.numIntervals = boundingBoxes.length;
+		this.RgbColors = RgbColors;
 		this.init();
 	}
 
@@ -65,6 +68,18 @@ export default class Board {
 					for (let updatedCellData of batchUpdates) {
 						this.cellsData[updatedCellData.index] = updatedCellData;
 					}
+					/* copy(this.cellsData); */
+					/* fs.writeFile(
+						"output.json",
+						JSON.stringify(this.cellsData, null, 4),
+						(err) => {
+							if (err) {
+								console.error("Error writing to file:", err);
+							} else {
+								console.log("Data has been written to output.json");
+							}
+						}
+					); */
 					break;
 				case "setInitialCellsData":
 					this.cellsData = data;
@@ -77,24 +92,6 @@ export default class Board {
 					console.error(`Unknown message type: ${type}`);
 			}
 		};
-
-		this.poline = new Poline({
-			numPoints: this.numIntervals,
-			anchorColors: [
-				[0, 1.0, 1.0],
-				[0, 1.0, 0.5]
-				//... more colors
-			]
-		});
-
-		/* console.log(this.poline.colors); */
-
-		// Convert Poline colors to RGB format
-		this.RgbColors = [...this.poline.colors].map((c) =>
-			formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2] })
-		);
-
-		//console.log(this.RgbColors);
 
 		// Populate array with cells
 		for (const [i, [x, y]] of this.points.entries()) {
@@ -206,6 +203,11 @@ export default class Board {
 		return visibleCells;
 	};
 
+	/**
+	 * Returns an object containing the count of each medium in the given array of cells.
+	 * @param {Array} cells - An array of cell objects.
+	 * @returns {Object} An object containing the count of each medium in the given array of cells.
+	 */
 	getMediumCounts = (cells) => {
 		const count = cells.reduce((acc, cell) => {
 			if (!acc[cell.medium]) {
