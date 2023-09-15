@@ -264,7 +264,7 @@
 		line-height: 1.6;
 	}
 
-	#wrapper {
+	.wrapper {
 		position: absolute;
 		width: 100%;
 	}
