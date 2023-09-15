@@ -68,23 +68,15 @@ export default class Board {
 					for (let updatedCellData of batchUpdates) {
 						this.cellsData[updatedCellData.index] = updatedCellData;
 					}
-					/* copy(this.cellsData); */
-					/* fs.writeFile(
-						"output.json",
-						JSON.stringify(this.cellsData, null, 4),
-						(err) => {
-							if (err) {
-								console.error("Error writing to file:", err);
-							} else {
-								console.log("Data has been written to output.json");
-							}
-						}
-					); */
 					break;
 				case "setInitialCellsData":
 					this.cellsData = data;
 					this.mediumCounts = this.getMediumCounts(this.cellsData);
-					console.log("board mediumCounts:", this.mediumCounts);
+					/* console.log(
+						"board mediumCounts:",
+						Object.keys(this.mediumCounts).length,
+						this.mediumCounts
+					); */
 					// Here I try to render the initial state by calling the displayInitial function
 					this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
 					break;
@@ -95,12 +87,13 @@ export default class Board {
 
 		// Populate array with cells
 		for (const [i, [x, y]] of this.points.entries()) {
+			const roundedY = Math.round(y);
 			const polygon = this.voronoi.cellPolygon(i);
 			const neighbors = [...this.voronoi.neighbors(i)];
 			let color;
 			for (let j = 0; j < this.boundingBoxes.length; j++) {
 				const { top, height } = this.boundingBoxes[j];
-				if (y >= top && y < top + height) {
+				if (roundedY >= top && roundedY <= top + height) {
 					color = this.RgbColors[j];
 					break;
 				}
@@ -134,7 +127,10 @@ export default class Board {
 	};
 
 	generate = (startGen, numGens) => {
-		console.log("board generate mediumCount:", this.mediumCounts);
+		/* console.log(
+			"board generate mediumCount:",
+			this.mediumCounts
+		); */
 		this.worker.postMessage({
 			type: "generate",
 			data: {
@@ -208,8 +204,10 @@ export default class Board {
 	 * @param {Array} cells - An array of cell objects.
 	 * @returns {Object} An object containing the count of each medium in the given array of cells.
 	 */
-	getMediumCounts = (cells) => {
-		const count = cells.reduce((acc, cell) => {
+	getMediumCounts = (cellsData) => {
+		cellsData.sort((a, b) => a.boundingBox.minY - b.boundingBox.minY);
+
+		const count = cellsData.reduce((acc, cell) => {
 			if (!acc[cell.medium]) {
 				acc[cell.medium] = 0;
 			}

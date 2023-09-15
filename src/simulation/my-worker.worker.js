@@ -93,7 +93,7 @@ function initCellBands(cells) {
 	}, {});
 
 	for (const [index, cell] of Object.entries(topmostCells)) {
-		const damp = 11.5;
+		const damp = 11.65;
 		const offset = -30;
 		// Set the topmost cell's state to 1
 		cell.setCurrent(1, Math.floor(cell.boundingBox.minY / damp) + offset);
@@ -221,7 +221,7 @@ function generate(startGen, numGens, mediumCounts) {
 			const yMin = Math.min(...yValues);
 			/* console.log("yValues:", yValues);
 			console.log("yMin:", yMin); */
-			console.log("quotient", yMin, gen, yMin / gen);
+			/* console.log("quotient", yMin, gen, yMin / gen); */
 		}
 
 		// Update the main sets

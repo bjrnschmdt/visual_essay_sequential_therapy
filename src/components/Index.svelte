@@ -21,12 +21,15 @@
 		scrollY = 0,
 		outerHeight;
 	let board;
-	let dampFactor = 11.5;
+	let dampFactor = 11.65;
 	/* let dampFactor = 5.5; */
 	let easeFactor = 16;
-	let genCurrent = 1;
+	/* let genCurrent = 1;
 	let genCurrentDamped = 1;
-	let genCurrentDelta = 0;
+	let genCurrentDelta = 0; */
+	let genCurrent = -29;
+	let genCurrentDamped = -29;
+	let genCurrentDelta = -30;
 	let yCurrent = 1;
 	let yRealPrevious = 0;
 	let yRealDelta = 0;
@@ -44,12 +47,8 @@
 	/* const maxScrollHeight = document.body.scrollHeight; */
 	let maxScrollPos = numGensPerBatch * dampFactor;
 
-	let cardWraps = [];
-
 	onMount(() => {
 		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
-		cardWraps = document.querySelectorAll(".card-wrap");
-		console.log("cardWraps: ", cardWraps.length);
 		const boundingBoxes = getBoundingBoxes();
 
 		poline = new Poline({
@@ -66,9 +65,6 @@
 		rgbColors = [...poline.colors].map((c) =>
 			formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2], alpha: 0.35 })
 		);
-
-		console.log("rgbColors: ", rgbColors.length);
-		console.log("content.text: ", content.text.length);
 
 		// Convert rgbColors to d3.color format
 		d3Colors = [...rgbColors].map((c) => color(c));
@@ -171,8 +167,6 @@
 	function getBoundingBoxes() {
 		const boundingBoxes = [];
 		const parentElement = document.querySelector(".wrapper");
-		/* console.log("parentElement: ", parentElement); */
-		console.log("children: ", parentElement.children);
 
 		[...parentElement.children].forEach((childElement) => {
 			const boundingBox = {
@@ -181,7 +175,6 @@
 			};
 			boundingBoxes.push(boundingBox);
 		});
-		console.log("boundingBoxes: ", boundingBoxes);
 		return boundingBoxes;
 	}
 
