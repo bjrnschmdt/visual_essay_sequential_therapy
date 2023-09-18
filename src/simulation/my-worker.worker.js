@@ -52,7 +52,7 @@ onmessage = (event) => {
 				cells[neighborIndex].setCurrent(0, 0);
 				candidateCellIndizes.add(neighborIndex);
 			} */
-			console.log("damFactor initCells:", data.dampFactor);
+			/* console.log("damFactor initCells:", data.dampFactor); */
 			initCellBands(cells, data.dampFactor);
 			break;
 		case "getInitialCellsData":
@@ -71,7 +71,7 @@ onmessage = (event) => {
 };
 
 function initCellBands(cells, dampFactor) {
-	console.log("damFactor initCellBands:", dampFactor);
+	/* console.log("damFactor initCellBands:", dampFactor); */
 	// Assume that the array of cells is called "cells"
 	const topmostCells = cells.reduce((acc, cell) => {
 		// If the current cell's color is not in the accumulator object, add it with the current cell as the topmost cell
@@ -139,7 +139,7 @@ function initCellBands(cells, dampFactor) {
 }
 
 function generate(startGen, numGens, mediumCounts) {
-	console.log("worker mediumCounts:", mediumCounts);
+	/* console.log("worker mediumCounts:", mediumCounts); */
 	// Loop through every generation
 	// Generate the next generation of cells
 

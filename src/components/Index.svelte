@@ -172,13 +172,13 @@
 	}
 
 	function handleResize() {
-		console.log("resize");
+		/* console.log("resize"); */
 		detectBreakpoints();
-		console.log("breakpoint Value: ", getBreakpointValue());
+		/* console.log("breakpoint Value: ", getBreakpointValue()); */
 		if (currentBreakpoint !== getBreakpointValue()) {
 			currentBreakpoint = getBreakpointValue();
 			dampFactor = currentBreakpoint.value;
-			console.log("dampFactor: ", dampFactor);
+			/* console.log("dampFactor: ", dampFactor); */
 			updateCanvasSize(currentBreakpoint.width, innerHeight);
 			genCurrentDamped = -30;
 			ctx.translate(0, -scrollY);
@@ -231,12 +231,12 @@
 
 		// Check if the result is in cache
 		if (cache[cacheKey]) {
-			console.log("cache hit");
+			/* console.log("cache hit"); */
 			return cache[cacheKey];
 		}
 
 		// Otherwise, compute and store in cache
-		console.log("cache miss, create new board");
+		/* console.log("cache miss, create new board"); */
 		cache[cacheKey] = new Board(
 			parameters.width,
 			bbWrapper.height,
@@ -249,7 +249,7 @@
 			rgbColors
 		);
 
-		console.log("generate new board");
+		/* console.log("generate new board"); */
 		cache[cacheKey].generate(startGen, numGensPerBatch);
 	}
 </script>
