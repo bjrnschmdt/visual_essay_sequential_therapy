@@ -1,6 +1,7 @@
 // my-worker.worker.js
 
 import { init } from "svelte/internal";
+import { max } from "d3";
 import Cell from "./Cell";
 
 const BATCH_SIZE = 3000;
@@ -8,6 +9,8 @@ let batchCounter = 0;
 
 let cells = [];
 let cellsData = [];
+
+let aliveCellsCountByMedium = {};
 
 // Maintain separate arrays for alive and candidate cells
 let aliveCellIndizes = new Set();
@@ -49,7 +52,8 @@ onmessage = (event) => {
 				cells[neighborIndex].setCurrent(0, 0);
 				candidateCellIndizes.add(neighborIndex);
 			} */
-			initCellBands(cells);
+			console.log("damFactor initCells:", data.dampFactor);
+			initCellBands(cells, data.dampFactor);
 			break;
 		case "getInitialCellsData":
 			postMessage({
@@ -66,7 +70,8 @@ onmessage = (event) => {
 	}
 };
 
-function initCellBands(cells) {
+function initCellBands(cells, dampFactor) {
+	console.log("damFactor initCellBands:", dampFactor);
 	// Assume that the array of cells is called "cells"
 	const topmostCells = cells.reduce((acc, cell) => {
 		// If the current cell's color is not in the accumulator object, add it with the current cell as the topmost cell
@@ -93,17 +98,17 @@ function initCellBands(cells) {
 	}, {});
 
 	for (const [index, cell] of Object.entries(topmostCells)) {
-		const damp = 11.65;
+		// const damp = 11.65;
 		const offset = -30;
 		// Set the topmost cell's state to 1
-		cell.setCurrent(1, Math.floor(cell.boundingBox.minY / damp) + offset);
+		cell.setCurrent(1, Math.floor(cell.boundingBox.minY / dampFactor) + offset);
 		aliveCellIndizes.add(cell.index);
 		// Set the topmost cell's neighbors' state to 0
 		for (const neighborIndex of cell.neighbors) {
 			if (cells[neighborIndex].medium === cell.medium) {
 				cells[neighborIndex].setCurrent(
 					0,
-					Math.floor(cell.boundingBox.minY / damp) + offset
+					Math.floor(cell.boundingBox.minY / dampFactor) + offset
 				);
 				candidateCellIndizes.add(neighborIndex);
 				//aliveCellIndizes.add(neighborIndex); // optional?
@@ -134,7 +139,7 @@ function initCellBands(cells) {
 }
 
 function generate(startGen, numGens, mediumCounts) {
-	/* console.log("worker mediumCounts:", mediumCounts); */
+	console.log("worker mediumCounts:", mediumCounts);
 	// Loop through every generation
 	// Generate the next generation of cells
 
@@ -209,7 +214,7 @@ function generate(startGen, numGens, mediumCounts) {
 			batchCounter = 0;
 		}
 
-		if (gen < 1) {
+		if (gen === numGens - 31) {
 			/* console.log("aliveCellIndizes:", aliveCellIndizes); */
 			/* const yPositions = getBottommostCells(aliveCellIndizes, cells).map(
 				(cell) => {
@@ -222,6 +227,9 @@ function generate(startGen, numGens, mediumCounts) {
 			/* console.log("yValues:", yValues);
 			console.log("yMin:", yMin); */
 			/* console.log("quotient", yMin, gen, yMin / gen); */
+			/* console.log(max(cellsData, (d) => d.state[Cell.lifetime - 1]));
+			console.log(max(cellsData, (d) => d.boundingBox.maxY));
+			console.log(cellsData); */
 		}
 
 		// Update the main sets
@@ -255,6 +263,17 @@ function inspectCandidate(
 		// set cellsData equivalent to cell. See Cell.js setCurrent, setColor
 		cellsData[candidate.getIndex()].state[0] = gen;
 		cellsData[candidate.getIndex()].color[0] = candidate.color[0];
+	}
+}
+
+function storeAliveCellsCountsByMedium() {
+	for (let medium of Object.keys(this.getMediumCounts())) {
+		// Assuming getMediumCounts() returns an object with bands as keys.
+		this.aliveCellsCountByBand[medium] = [];
+		for (let gen = 0; gen < this.numGenerations; gen++) {
+			this.aliveCellsCountByBand[medium][gen] =
+				this.countAliveCellsForGenerationAndBand(gen, medium);
+		}
 	}
 }
 

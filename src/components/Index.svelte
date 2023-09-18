@@ -6,6 +6,8 @@
 	/* import parsed from "./../data/md.json"; */
 	import { Poline, positionFunctions } from "poline";
 	import { formatRgb } from "culori";
+	import { detectBreakpoints, getBreakpointValue } from "$utils/breakpoints";
+	import ScrollHint from "./helpers/ScrollHint.svelte";
 
 	export let content;
 	export let showGraphics;
@@ -15,28 +17,29 @@
 
 	let worker;
 
+	let cache = {};
+
 	let innerWidth,
 		innerHeight,
 		scrollX,
 		scrollY = 0,
 		outerHeight;
-	let board;
-	let dampFactor = 11.65;
-	/* let dampFactor = 5.5; */
+	//let board;
+	let currentBreakpoint;
+	let dampFactor;
 	let easeFactor = 16;
-	/* let genCurrent = 1;
-	let genCurrentDamped = 1;
-	let genCurrentDelta = 0; */
-	let genCurrent = -29;
-	let genCurrentDamped = -29;
-	let genCurrentDelta = -30;
-	let yCurrent = 1;
-	let yRealPrevious = 0;
-	let yRealDelta = 0;
+	let genCurrent;
+	let genCurrentDamped;
+	let genCurrentDelta;
+	let yCurrent;
+	let yRealPrevious;
+	let yRealDelta;
 	let inProgress = true;
 	let poline;
 	let rgbColors = [];
 	let d3Colors = [];
+	let boundingBoxes;
+	let bbWrapper;
 
 	// Define the number of generations to generate at a time
 	const numGensPerBatch = 1000;
@@ -45,11 +48,19 @@
 	let startGen = -30;
 
 	/* const maxScrollHeight = document.body.scrollHeight; */
-	let maxScrollPos = numGensPerBatch * dampFactor;
+	//let maxScrollPos = numGensPerBatch * dampFactor;
 
 	onMount(() => {
 		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
-		const boundingBoxes = getBoundingBoxes();
+
+		// detect breakpoints
+		detectBreakpoints();
+		currentBreakpoint = getBreakpointValue();
+		dampFactor = currentBreakpoint.value;
+		console.log("key: ", currentBreakpoint.key);
+		console.log("dampFactor: ", dampFactor);
+
+		boundingBoxes = getBoundingBoxes();
 
 		poline = new Poline({
 			numPoints: boundingBoxes.length - 2,
@@ -79,63 +90,25 @@
 
 		yCurrent = scrollY;
 		yRealPrevious = scrollY;
-		yRealDelta = scrollY;
+		yRealDelta = 0;
+
+		genCurrent = scrollY / dampFactor;
+		genCurrentDamped = -30;
+		genCurrentDelta = genCurrent - genCurrentDamped;
 
 		// Get the canvas context
 		ctx = canvas.getContext("2d");
 
 		// Set the canvas dimensions
-		canvas.width = innerWidth;
+		canvas.width = currentBreakpoint.width;
 		canvas.height = innerHeight;
 		ctx.translate(0, -scrollY);
 
-		let bbWrapper = d3.select(".wrapper").node().getBoundingClientRect();
-		/* console.log("wrapper height: ", bbWrapper.height); */
-		board = new Board(
-			innerWidth,
-			bbWrapper.height,
-			600,
-			ctx,
-			scrollY,
-			innerHeight,
-			boundingBoxes,
-			rgbColors
-		);
+		bbWrapper = d3.select(".wrapper").node().getBoundingClientRect();
 
-		board.generate(startGen, numGensPerBatch);
+		getSimulation(currentBreakpoint);
 
 		animate();
-
-		/**
-		 * Animates the board by computing the bounding box of the visible region,
-		 * updating the previous and current Y values, and displaying the board with
-		 * the updated Y values. If the difference between the previous and current Y
-		 * values is less than 0.1, the animation stops.
-		 */
-		function animate() {
-			// Compute the difference between the current and previous Y values; used to dampen the scrolling
-			genCurrent = scrollY / dampFactor;
-			genCurrentDelta = genCurrent - genCurrentDamped;
-			genCurrentDamped += genCurrentDelta / easeFactor;
-
-			// Compute the difference between the current and previous real Y values; used to translate the canvas
-			yRealDelta = yCurrent - yRealPrevious;
-			yRealPrevious += yRealDelta;
-
-			// Display the board with the updated Y values
-			board.display(ctx, yCurrent, innerHeight, genCurrent, genCurrentDamped);
-
-			if (Math.abs(genCurrentDelta) < 0.1) {
-				inProgress = false;
-				return;
-			}
-
-			// Translate the canvas to adjust for the scrolling
-			ctx.translate(0, -yRealDelta);
-
-			// Request the next animation frame
-			window.requestAnimationFrame(animate);
-		}
 
 		d3.select(window).on("scroll", function () {
 			// Update polygons on scroll
@@ -157,11 +130,66 @@
 			// Close the worker thread
 			worker.terminate();
 		});
+
+		d3.select(window).on("resize", debounce(handleResize, 500));
 	});
 
-	function updateCanvasSize() {
-		canvas.width = innerWidth;
-		canvas.height = innerHeight;
+	/**
+	 * Animates the board by computing the bounding box of the visible region,
+	 * updating the previous and current Y values, and displaying the board with
+	 * the updated Y values. If the difference between the previous and current Y
+	 * values is less than 0.1, the animation stops.
+	 */
+	function animate() {
+		// Compute the difference between the current and previous Y values; used to dampen the scrolling
+		genCurrent = scrollY / dampFactor;
+		genCurrentDelta = genCurrent - genCurrentDamped;
+		genCurrentDamped += genCurrentDelta / easeFactor;
+
+		// Compute the difference between the current and previous real Y values; used to translate the canvas
+		yRealDelta = yCurrent - yRealPrevious;
+		yRealPrevious += yRealDelta;
+
+		// Display the board with the updated Y values
+		cache[currentBreakpoint.key].display(
+			ctx,
+			yCurrent,
+			innerHeight,
+			genCurrent,
+			genCurrentDamped
+		);
+
+		if (Math.abs(genCurrentDelta) < 0.1) {
+			inProgress = false;
+			return;
+		}
+
+		// Translate the canvas to adjust for the scrolling
+		ctx.translate(0, -yRealDelta);
+
+		// Request the next animation frame
+		window.requestAnimationFrame(animate);
+	}
+
+	function handleResize() {
+		console.log("resize");
+		detectBreakpoints();
+		console.log("breakpoint Value: ", getBreakpointValue());
+		if (currentBreakpoint !== getBreakpointValue()) {
+			currentBreakpoint = getBreakpointValue();
+			dampFactor = currentBreakpoint.value;
+			console.log("dampFactor: ", dampFactor);
+			updateCanvasSize(currentBreakpoint.width, innerHeight);
+			genCurrentDamped = -30;
+			ctx.translate(0, -scrollY);
+			getSimulation(currentBreakpoint);
+			animate();
+		}
+	}
+
+	function updateCanvasSize(width, height) {
+		canvas.width = width;
+		canvas.height = height;
 	}
 
 	function getBoundingBoxes() {
@@ -187,6 +215,43 @@
 		let value = y1 + (y2 - y1) * Math.pow((x - x1) / (x2 - x1), p);
 		return value.toFixed(1);
 	}
+
+	function debounce(func, delay) {
+		let timer;
+		return function (...args) {
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				func.apply(this, args);
+			}, delay);
+		};
+	}
+
+	function getSimulation(parameters) {
+		const cacheKey = parameters.key;
+
+		// Check if the result is in cache
+		if (cache[cacheKey]) {
+			console.log("cache hit");
+			return cache[cacheKey];
+		}
+
+		// Otherwise, compute and store in cache
+		console.log("cache miss, create new board");
+		cache[cacheKey] = new Board(
+			parameters.width,
+			bbWrapper.height,
+			/* 600, */
+			ctx,
+			scrollY,
+			innerHeight,
+			dampFactor,
+			boundingBoxes,
+			rgbColors
+		);
+
+		console.log("generate new board");
+		cache[cacheKey].generate(startGen, numGensPerBatch);
+	}
 </script>
 
 <canvas bind:this="{canvas}"></canvas>
@@ -194,6 +259,7 @@
 	<div class="h1-wrap">
 		<h1>{content.h1}</h1>
 		<h2>Ein Visual Essay des Kiel Science Communication Network</h2>
+		<ScrollHint />
 	</div>
 
 	{#each content.text as paragraph, index}
@@ -219,9 +285,6 @@
 />
 
 <style>
-	canvas {
-		background-color: rgb(25, 25, 25);
-	}
 	.h1-wrap {
 		display: flex;
 		flex-direction: column;
@@ -229,22 +292,19 @@
 		align-items: center;
 		z-index: 1;
 		position: relative;
-		/* width: 560px; */
-		/* width: 100%; */
-		max-width: calc(100% - 20px);
-		/* margin: 30vh auto 25vh; */
-		/* padding: 0 0 64px; */
-		/* margin: 256px auto; */
+		/* max-width: calc(100% - 20px); */
 		height: 100vh;
 	}
+
 	h1 {
 		font-family: "Golos Text";
 		font-weight: 700;
 		line-height: 1;
-		font-size: var(--56px);
+		font-size: clamp(var(--18px), 8vw, var(--56px));
 		z-index: 99;
 		color: white;
-		width: 560px;
+		width: 100%;
+		max-width: 560px;
 		text-align: left;
 	}
 
@@ -252,30 +312,35 @@
 		font-family: "Golos Text";
 		font-weight: 400;
 		line-height: 1;
-		font-size: var(--18px);
+		font-size: clamp(var(--16px), 4vw, var(--18px));
 		z-index: 99;
 		color: white;
-		width: 560px;
+		width: 100%;
+		max-width: 560px;
 		text-align: left;
 	}
 
 	p {
 		font-family: "Golos Text";
 		line-height: 1.6;
+		width: 100%;
+		max-width: 560px;
 	}
 
 	.wrapper {
 		position: absolute;
 		width: 100%;
+		padding: 0 16px;
 	}
 
 	canvas {
+		background-color: rgb(25, 25, 25);
+		overflow: hidden;
 		position: fixed;
-		top: 0;
-		left: 0;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
 		z-index: -1;
-		width: 100%;
-		height: 100%;
 	}
 
 	.card-wrap {
@@ -285,10 +350,7 @@
 		align-items: center;
 		z-index: 1;
 		position: relative;
-		width: 560px;
-		/* width: 100%; */
-		max-width: calc(100% - 20px);
-		/* margin: 30vh auto 25vh; */
+		max-width: 560px;
 		padding: 0 0 64px;
 		margin: auto;
 	}
@@ -300,13 +362,14 @@
 		padding: 18px 24px;
 		margin-top: 20px;
 		color: black;
+		width: 100%;
 		max-width: 560px;
 		border-radius: 4px;
 		box-shadow: 0 0 20px -10px black;
 	}
 
 	.info {
-		width: 560px;
+		max-width: 560px;
 		background: rgba(255, 0, 0, 0.1);
 		backdrop-filter: saturate(70%) blur(10px);
 		-webkit-backdrop-filter: saturate(70%) blur(10px);
@@ -320,7 +383,19 @@
 		border-width: 1px;
 		border-color: rgba(255, 0, 0, 0.35);
 		border-radius: 4px;
-		/* border-bottom-left-radius: 8px;
-		border-bottom-right-radius: 8px; */
+		width: 100%;
+	}
+
+	@media (max-width: 480px) {
+		h1,
+		h2,
+		p {
+			padding: 0 20px;
+		}
+
+		.card,
+		.info {
+			padding: 10px 20px;
+		}
 	}
 </style>

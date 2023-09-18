@@ -15,23 +15,22 @@ export default class Board {
 	constructor(
 		width_ = 500,
 		height_ = 500,
-		numGenerations,
 		ctx,
 		scrollY,
 		innerHeight,
+		dampFactor,
 		boundingBoxes,
 		RgbColors
 	) {
 		this.listeners = new Map();
 		this.threshold = 2;
-		this.numGenerations = numGenerations;
 		this.radius = 16;
 		this.width = width_;
 		this.height = height_;
 		this.ctx = ctx;
 		this.scrollY = scrollY;
 		this.innerHeight = innerHeight;
-
+		this.dampFactor = dampFactor;
 		this.points = [
 			...poissonDiscSampler(0, 0, this.width, this.height, this.radius)
 		];
@@ -45,7 +44,6 @@ export default class Board {
 		this.cellsData = [];
 		this.livingCells = [];
 		this.livingCellsNeighbors = [];
-		this.generations = new Array(this.numGenerations);
 		this.latestGen = 0;
 		this.latestGenDamped = 0;
 		this.boundingBoxes = boundingBoxes;
@@ -71,14 +69,14 @@ export default class Board {
 					break;
 				case "setInitialCellsData":
 					this.cellsData = data;
-					this.mediumCounts = this.getMediumCounts(this.cellsData);
+					this.totalCellsInMedium = this.getMediumCounts(this.cellsData);
 					/* console.log(
 						"board mediumCounts:",
-						Object.keys(this.mediumCounts).length,
-						this.mediumCounts
+						Object.keys(this.totalCellsInMedium).length,
+						this.totalCellsInMedium
 					); */
 					// Here I try to render the initial state by calling the displayInitial function
-					this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
+					//this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
 					break;
 				default:
 					console.error(`Unknown message type: ${type}`);
@@ -117,7 +115,7 @@ export default class Board {
 		this.index = this.delaunay.find(Math.random() * 2000, 0);
 		this.worker.postMessage({
 			type: "initCells",
-			data: { startIndex: this.index }
+			data: { startIndex: this.index, dampFactor: this.dampFactor }
 		});
 
 		// display initial state
