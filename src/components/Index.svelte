@@ -57,8 +57,8 @@
 		detectBreakpoints();
 		currentBreakpoint = getBreakpointValue();
 		dampFactor = currentBreakpoint.value;
-		console.log("key: ", currentBreakpoint.key);
-		console.log("dampFactor: ", dampFactor);
+		/* console.log("key: ", currentBreakpoint.key);
+		console.log("dampFactor: ", dampFactor); */
 
 		boundingBoxes = getBoundingBoxes();
 
@@ -267,7 +267,7 @@
 			{#if showGraphics}
 				<p class="info">
 					P.aeruginosa | Tag {index.toString().padStart(2, "0")} | Antibiotikakonzentration
-					{interpolate(index + 1)}x | Population 0.24
+					{interpolate(index + 1)}x
 				</p>
 			{/if}
 			<p class="card">{paragraph.value}</p>
