@@ -214,6 +214,7 @@
 
 	function interpolate(x, y1 = 0.5, y2 = 40, x1 = 1, x2 = 24, p = 2) {
 		let value = y1 + (y2 - y1) * Math.pow((x - x1) / (x2 - x1), p);
+		value = value * 2; // correcting the concentration level
 		return value.toFixed(1);
 	}
 
@@ -267,7 +268,7 @@
 		<div class="card-wrap">
 			{#if showGraphics}
 				<p class="info">
-					P.aeruginosa | Tag {index.toString().padStart(2, "0")} | Antibiotikakonzentration
+					P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
 					{interpolate(index + 1)}x
 				</p>
 			{/if}
