@@ -51,11 +51,20 @@
 	//let maxScrollPos = numGensPerBatch * dampFactor;
 
 	onMount(() => {
-		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
-
 		// detect breakpoints
 		detectBreakpoints();
 		currentBreakpoint = getBreakpointValue();
+
+		// Get the canvas context
+		ctx = canvas.getContext("2d");
+
+		// Set the canvas dimensions
+		canvas.width = currentBreakpoint.width;
+		canvas.height = innerHeight;
+		ctx.translate(0, -scrollY);
+
+		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
+
 		dampFactor = currentBreakpoint.value;
 		/* console.log("key: ", currentBreakpoint.key);
 		console.log("dampFactor: ", dampFactor); */
@@ -95,14 +104,6 @@
 		genCurrent = scrollY / dampFactor;
 		genCurrentDamped = -30;
 		genCurrentDelta = genCurrent - genCurrentDamped;
-
-		// Get the canvas context
-		ctx = canvas.getContext("2d");
-
-		// Set the canvas dimensions
-		canvas.width = currentBreakpoint.width;
-		canvas.height = innerHeight;
-		ctx.translate(0, -scrollY);
 
 		bbWrapper = d3.select(".wrapper").node().getBoundingClientRect();
 
@@ -369,6 +370,7 @@
 	}
 
 	.info {
+		text-align: center;
 		max-width: 560px;
 		background: rgba(255, 0, 0, 0.1);
 		backdrop-filter: saturate(70%) blur(10px);
