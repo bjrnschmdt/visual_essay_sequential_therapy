@@ -4,7 +4,7 @@ import { init } from "svelte/internal";
 import { max } from "d3";
 import Cell from "./Cell";
 
-const BATCH_SIZE = 3000;
+const BATCH_SIZE = 30;
 let batchCounter = 0;
 
 let cells = [];
@@ -212,6 +212,7 @@ function generate(startGen, numGens, mediumCounts) {
 			updatedCellIndizes.clear();
 			batchUpdates = [];
 			batchCounter = 0;
+			console.log("batch delivered");
 		}
 
 		if (gen === numGens - 31) {

@@ -43,6 +43,7 @@
 	"subdirectory": "visual_essay_sequential_therapy",
 	"dependencies": {
 		"culori": "^3.2.0",
+		"d3-color": "^3.1.0",
 		"d3-delaunay": "^6.0.2",
 		"d3-hexbin": "^0.2.2",
 		"p5": "^1.6.0",

@@ -76,7 +76,8 @@ export default class Board {
 						this.totalCellsInMedium
 					); */
 					// Here I try to render the initial state by calling the displayInitial function
-					//this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
+					console.log("displayInitial");
+					this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
 					break;
 				default:
 					console.error(`Unknown message type: ${type}`);
