@@ -22,7 +22,7 @@
 		scrollY = 0;
 	let currentBreakpoint;
 	let dampFactor;
-	let easeFactor = 16;
+	let easeFactor = 32;
 	let genCurrent, genDamped, genDelta;
 	let yPrevious, yDelta;
 	let poline;
