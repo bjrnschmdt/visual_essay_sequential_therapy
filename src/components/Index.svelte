@@ -1,10 +1,9 @@
 <script>
-	import { getContext, onMount } from "svelte";
+	import { onMount } from "svelte";
 	import Board from "./../simulation/Board";
 	import * as d3 from "d3";
 	import { color } from "d3-color";
-	/* import parsed from "./../data/md.json"; */
-	import { Poline, positionFunctions } from "poline";
+	import { Poline } from "poline";
 	import { formatRgb } from "culori";
 	import { detectBreakpoints, getBreakpointValue } from "$utils/breakpoints";
 	import ScrollHint from "./helpers/ScrollHint.svelte";
@@ -19,116 +18,55 @@
 
 	let cache = {};
 
-	let innerWidth,
-		innerHeight,
-		scrollX,
-		scrollY = 0,
-		outerHeight;
-	//let board;
+	let innerHeight,
+		scrollY = 0;
 	let currentBreakpoint;
 	let dampFactor;
 	let easeFactor = 16;
-	let genCurrent;
-	let genCurrentDamped;
-	let genCurrentDelta;
-	let yCurrent;
-	let yRealPrevious;
-	let yRealDelta;
-	let inProgress = true;
+	let genCurrent, genDamped, genDelta;
+	let yPrevious, yDelta;
 	let poline;
-	let rgbColors = [];
-	let d3Colors = [];
+	let rgbColors = [],
+		d3Colors = [];
 	let boundingBoxes;
-	let bbWrapper;
+	let boundingBoxWrapper;
+	let isPending = false;
 
 	// Define the number of generations to generate at a time
-	const numGensPerBatch = 1000;
+	const NUM_GENERATIONS = 1000;
 
 	// Define the starting generation number
-	let startGen = -30;
-
-	/* const maxScrollHeight = document.body.scrollHeight; */
-	//let maxScrollPos = numGensPerBatch * dampFactor;
+	let START_GEN = -30;
 
 	onMount(() => {
-		// detect breakpoints
-		detectBreakpoints();
-		currentBreakpoint = getBreakpointValue();
-
-		// Get the canvas context
-		ctx = canvas.getContext("2d");
-
-		// Set the canvas dimensions
-		canvas.width = currentBreakpoint.width;
-		canvas.height = innerHeight;
-		ctx.translate(0, -scrollY);
-
-		// Override the CSS styles to avoid stretching
-		canvas.style.width = "auto";
-		canvas.style.height = "auto";
-
+		initializeCanvasAndBreakpoints();
 		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
 
-		dampFactor = currentBreakpoint.value;
-		/* console.log("key: ", currentBreakpoint.key);
-		console.log("dampFactor: ", dampFactor); */
-
+		// get the bounding boxes of the text paragraphs to get the amount of medium bands used for setting up the colors
 		boundingBoxes = getBoundingBoxes();
 
-		poline = new Poline({
-			numPoints: boundingBoxes.length - 2,
-			/* positionFunction: positionFunctions.exponentialPosition, */
-			anchorColors: [
-				[0, 1.0, 1.0],
-				[0, 1.0, 0.5]
-				//... more colors
-			]
-		});
+		setupColors();
+		updateStyles();
 
-		// Convert Poline colors to RGB format
-		rgbColors = [...poline.colors].map((c) =>
-			formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2], alpha: 0.35 })
-		);
+		yPrevious = scrollY;
+		yDelta = 0;
 
-		// Convert rgbColors to d3.color format
-		d3Colors = [...rgbColors].map((c) => color(c));
-
-		d3.selectAll(".info")
-			.style("color", (d, i) => d3Colors[i + 1].formatRgb())
-			.style("border-color", (d, i) => d3Colors[i + 1].formatRgb())
-			.style("background", (d, i) => {
-				d3Colors[i + 1].opacity = 0.1;
-				return d3Colors[i + 1].formatRgb();
-			});
-
-		yCurrent = scrollY;
-		yRealPrevious = scrollY;
-		yRealDelta = 0;
-
+		dampFactor = currentBreakpoint.value;
 		genCurrent = scrollY / dampFactor;
-		genCurrentDamped = -30;
-		genCurrentDelta = genCurrent - genCurrentDamped;
+		genDamped = -30;
+		genDelta = genCurrent - genDamped;
 
-		bbWrapper = d3.select(".wrapper").node().getBoundingClientRect();
+		boundingBoxWrapper = d3.select(".wrapper").node().getBoundingClientRect();
 
 		getSimulation(currentBreakpoint);
 
 		animate();
 
 		d3.select(window).on("scroll", function () {
-			// Update polygons on scroll
-			yCurrent = scrollY;
-			if (!inProgress) {
-				inProgress = true;
-				animate();
+			if (!isPending) {
+				isPending = true;
+				requestAnimationFrame(animate);
 			}
-
-			// If the user has scrolled to the bottom of the page, generate the next batch of generations
-			/* if (y + 100 >= maxScrollPos) {
-  			startGen += numGensPerBatch;
-			maxScrollPos += numGensPerBatch * dampFactor; 
-  			board.generate(startGen, numGensPerBatch);
-			} */
 		});
 
 		d3.select(window).on("beforeunload", function () {
@@ -146,49 +84,45 @@
 	 * values is less than 0.1, the animation stops.
 	 */
 	function animate() {
-		// Compute the difference between the current and previous Y values; used to dampen the scrolling
-		genCurrent = scrollY / dampFactor;
-		genCurrentDelta = genCurrent - genCurrentDamped;
-		genCurrentDamped += genCurrentDelta / easeFactor;
+		// Compute the difference between the current and previous scroll values; used to translate the canvas
+		yDelta = scrollY - yPrevious;
 
-		// Compute the difference between the current and previous real Y values; used to translate the canvas
-		yRealDelta = yCurrent - yRealPrevious;
-		yRealPrevious += yRealDelta;
-
-		// Display the board with the updated Y values
-		cache[currentBreakpoint.key].display(
-			ctx,
-			yCurrent,
-			innerHeight,
-			genCurrent,
-			genCurrentDamped
-		);
-
-		if (Math.abs(genCurrentDelta) < 0.1) {
-			inProgress = false;
-			return;
+		// Update the cellular automaton based on scrollDelta
+		if (yDelta !== 0) {
+			// Translate the canvas to adjust for the scrolling
+			ctx.translate(0, -yDelta);
+			yPrevious = scrollY;
 		}
 
-		// Translate the canvas to adjust for the scrolling
-		ctx.translate(0, -yRealDelta);
+		genCurrent = scrollY / dampFactor;
+		genDelta = genCurrent - genDamped;
+		genDamped += genDelta / easeFactor;
+		genDamped = Math.min(
+			genDamped,
+			cache[currentBreakpoint.key].latestComputedGen
+		);
 
-		// Request the next animation frame
-		window.requestAnimationFrame(animate);
+		// Display the board with the updated Y values
+		cache[currentBreakpoint.key].display(genDamped);
+
+		// If animation is still in progress or there's potential for more scrolling
+		if (Math.abs(genDelta) > 0.1 || Math.abs(yDelta) > 0) {
+			requestAnimationFrame(animate);
+		} else {
+			isPending = false;
+		}
 	}
 
 	function handleResize() {
-		/* console.log("resize"); */
 		detectBreakpoints();
-		/* console.log("breakpoint Value: ", getBreakpointValue()); */
 		if (currentBreakpoint !== getBreakpointValue()) {
 			currentBreakpoint = getBreakpointValue();
 			dampFactor = currentBreakpoint.value;
-			/* console.log("dampFactor: ", dampFactor); */
 			updateCanvasSize(currentBreakpoint.width, innerHeight);
-			genCurrentDamped = -30;
+			genDamped = -30;
 			ctx.translate(0, -scrollY);
 			getSimulation(currentBreakpoint);
-			animate();
+			requestAnimationFrame(animate);
 		}
 	}
 
@@ -232,6 +166,53 @@
 		};
 	}
 
+	function initializeCanvasAndBreakpoints() {
+		// detect breakpoints
+		detectBreakpoints();
+		currentBreakpoint = getBreakpointValue();
+
+		// Get the canvas context
+		ctx = canvas.getContext("2d");
+
+		// Set the canvas dimensions
+		canvas.width = currentBreakpoint.width;
+		canvas.height = innerHeight;
+		ctx.translate(0, -scrollY);
+
+		// Override the CSS styles to avoid stretching
+		canvas.style.width = "auto";
+		canvas.style.height = "auto";
+	}
+
+	function setupColors() {
+		poline = new Poline({
+			numPoints: boundingBoxes.length - 2,
+			anchorColors: [
+				[0, 1.0, 1.0],
+				[0, 1.0, 0.5]
+				// ... more colors
+			]
+		});
+
+		// Convert Poline colors to RGB format
+		rgbColors = [...poline.colors].map((c) =>
+			formatRgb({ mode: "hsl", h: c[0], s: c[1], l: c[2], alpha: 0.35 })
+		);
+
+		// Convert rgbColors to d3.color format
+		d3Colors = [...rgbColors].map((c) => color(c));
+	}
+
+	function updateStyles() {
+		d3.selectAll(".info")
+			.style("color", (d, i) => d3Colors[i + 1].formatRgb())
+			.style("border-color", (d, i) => d3Colors[i + 1].formatRgb())
+			.style("background", (d, i) => {
+				d3Colors[i + 1].opacity = 0.1;
+				return d3Colors[i + 1].formatRgb();
+			});
+	}
+
 	function getSimulation(parameters) {
 		const cacheKey = parameters.key;
 
@@ -245,8 +226,7 @@
 		/* console.log("cache miss, create new board"); */
 		cache[cacheKey] = new Board(
 			parameters.width,
-			bbWrapper.height,
-			/* 600, */
+			boundingBoxWrapper.height,
 			ctx,
 			scrollY,
 			innerHeight,
@@ -256,7 +236,7 @@
 		);
 
 		/* console.log("generate new board"); */
-		cache[cacheKey].generate(startGen, numGensPerBatch);
+		cache[cacheKey].generate(START_GEN, NUM_GENERATIONS);
 	}
 </script>
 
@@ -282,13 +262,7 @@
 	{/each}
 </div>
 
-<svelte:window
-	bind:scrollX="{scrollX}"
-	bind:scrollY="{scrollY}"
-	bind:innerWidth="{innerWidth}"
-	bind:innerHeight="{innerHeight}"
-	bind:outerHeight="{outerHeight}"
-/>
+<svelte:window bind:scrollY="{scrollY}" bind:innerHeight="{innerHeight}" />
 
 <style>
 	.h1-wrap {

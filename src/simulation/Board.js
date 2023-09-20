@@ -3,13 +3,11 @@ import * as d3 from "d3";
 import { Delaunay } from "d3-delaunay";
 import { poissonDiscSampler } from "./poissonDiscSampler";
 import MyWorker from "./../simulation/my-worker.worker.js?worker";
-import { Poline } from "poline";
-import { formatRgb } from "culori";
-/* const fs = require("fs"); */
 
-function dist(x1, y1, x2, y2) {
-	return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
-}
+const THRESHOLD = 2;
+const RADIUS = 16;
+const GEN_DAMPED = -30;
+const EASE_FACTOR = 16;
 
 export default class Board {
 	constructor(
@@ -23,14 +21,18 @@ export default class Board {
 		RgbColors
 	) {
 		this.listeners = new Map();
-		this.threshold = 2;
-		this.radius = 16;
+		this.threshold = THRESHOLD;
+		this.radius = RADIUS;
 		this.width = width_;
 		this.height = height_;
 		this.ctx = ctx;
 		this.scrollY = scrollY;
 		this.innerHeight = innerHeight;
 		this.dampFactor = dampFactor;
+		this.genCurrent = scrollY / dampFactor;
+		this.genDamped = GEN_DAMPED;
+		this.genDelta = this.genCurrent - this.genDamped;
+		this.easeFactor = EASE_FACTOR;
 		this.points = [
 			...poissonDiscSampler(0, 0, this.width, this.height, this.radius)
 		];
@@ -44,8 +46,8 @@ export default class Board {
 		this.cellsData = [];
 		this.livingCells = [];
 		this.livingCellsNeighbors = [];
-		this.latestGen = 0;
-		this.latestGenDamped = 0;
+		this.latestComputedGen = 0;
+		this.latestComputedGenDamped = 0;
 		this.boundingBoxes = boundingBoxes;
 		this.numIntervals = boundingBoxes.length;
 		this.RgbColors = RgbColors;
@@ -62,7 +64,7 @@ export default class Board {
 			switch (type) {
 				case "updateCells":
 					const { batchUpdates, gen } = data;
-					this.latestGen = gen;
+					this.latestComputedGen = gen;
 					for (let updatedCellData of batchUpdates) {
 						this.cellsData[updatedCellData.index] = updatedCellData;
 					}
@@ -76,7 +78,6 @@ export default class Board {
 						this.totalCellsInMedium
 					); */
 					// Here I try to render the initial state by calling the displayInitial function
-					console.log("displayInitial");
 					this.displayInitial(this.ctx, this.scrollY, this.innerHeight);
 					break;
 				default:
@@ -140,29 +141,22 @@ export default class Board {
 		});
 	};
 
-	display = (ctx, scrollY, innerHeight, currentGen, currentGenDamped) => {
-		this.latestGenDamped = updateGen(
-			d3.min([this.latestGen, currentGen]),
-			this.latestGenDamped
-		);
-
-		const gen = d3.min([currentGenDamped, this.latestGenDamped]);
-
+	display = (gen) => {
 		for (const cell of this.getVisibleCells(
 			this.cellsData,
 			scrollY,
-			innerHeight
+			this.innerHeight
 		)) {
-			ctx.beginPath();
-			this.voronoi.renderCell(cell.index, ctx);
-			ctx.strokeStyle = d3
+			this.ctx.beginPath();
+			this.voronoi.renderCell(cell.index, this.ctx);
+			this.ctx.strokeStyle = d3
 				.color(getColor(cell, Math.round(gen)))
 				.brighter()
 				.formatRgb();
-			ctx.stroke();
-			ctx.fillStyle = getColor(cell, Math.round(gen));
-			ctx.fill();
-			ctx.closePath();
+			this.ctx.stroke();
+			this.ctx.fillStyle = getColor(cell, Math.round(gen));
+			this.ctx.fill();
+			this.ctx.closePath();
 		}
 	};
 
