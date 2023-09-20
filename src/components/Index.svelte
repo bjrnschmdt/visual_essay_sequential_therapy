@@ -63,6 +63,10 @@
 		canvas.height = innerHeight;
 		ctx.translate(0, -scrollY);
 
+		// Override the CSS styles to avoid stretching
+		canvas.style.width = "auto";
+		canvas.style.height = "auto";
+
 		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
 
 		dampFactor = currentBreakpoint.value;
@@ -336,6 +340,9 @@
 	}
 
 	canvas {
+		display: block;
+		width: 100%;
+		height: 100%;
 		background-color: rgb(25, 25, 25);
 		overflow: hidden;
 		position: fixed;
