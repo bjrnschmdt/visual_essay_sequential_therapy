@@ -26,14 +26,31 @@ onmessage = (event) => {
 	switch (type) {
 		case "addCell":
 			const { x, y, index, polygon, neighbors, medium } = data;
-			cells.push(new Cell(x, y, index, polygon, neighbors, medium));
+
+			if (typeof index !== "number" || index < 0) {
+				console.error("Invalid index:", index);
+				break;
+			}
+			/* cells.push(new Cell(x, y, index, polygon, neighbors, medium));
 			cellsData.push({
 				index: index,
 				boundingBox: cells[index].getBoundingBox(),
 				color: cells[index].color,
 				state: cells[index].state,
 				medium: medium
-			});
+			}); */
+			cells[index] = new Cell(x, y, index, polygon, neighbors, medium);
+			cellsData[index] = {
+				index: index,
+				boundingBox: cells[index].getBoundingBox(),
+				color: cells[index].color,
+				state: cells[index].state,
+				medium: medium
+			};
+
+			/* console.log("cell added");
+			console.log("cells - worker case addCell:", { ...cells });
+			console.log("cellsData - worker case addCell:", { ...cellsData }); */
 			break;
 		/* case "initCell":
 			const { startIndex } = data;
@@ -45,15 +62,13 @@ onmessage = (event) => {
 			}
 			break; */
 		case "initCells":
-			/* const { startIndex } = data;
-			cells[startIndex].setCurrent(1, 0);
-			aliveCellIndizes.add(startIndex);
-			for (const neighborIndex of cells[startIndex].neighbors) {
-				cells[neighborIndex].setCurrent(0, 0);
-				candidateCellIndizes.add(neighborIndex);
-			} */
-			/* console.log("damFactor initCells:", data.dampFactor); */
-			initCellBands(cells, data.dampFactor);
+			initCellBands(cells, data.dampFactor).then(() => {
+				// Here, fetch the initial data
+				postMessage({
+					type: "setInitialCellsData",
+					data: cellsData
+				});
+			});
 			break;
 		case "getInitialCellsData":
 			postMessage({
@@ -71,52 +86,61 @@ onmessage = (event) => {
 };
 
 function initCellBands(cells, dampFactor) {
-	/* console.log("damFactor initCellBands:", dampFactor); */
-	// Assume that the array of cells is called "cells"
-	const topmostCells = cells.reduce((acc, cell) => {
-		// If the current cell's color is not in the accumulator object, add it with the current cell as the topmost cell
-		if (!acc[cell.medium]) {
-			acc[cell.medium] = cell;
-		}
-		// If the current cell's y-coordinate is higher than the topmost cell's y-coordinate for the current color, update the topmost cell
-		else if (cell.boundingBox.minY < acc[cell.medium].boundingBox.minY) {
-			acc[cell.medium] = cell;
-		}
-		return acc;
-	}, {});
+	return new Promise((resolve) => {
+		// Assume that the array of cells is called "cells"
+		const topmostCells = cells.reduce((acc, cell) => {
+			// If the current cell's color is not in the accumulator object, add it with the current cell as the topmost cell
+			if (!acc[cell.medium]) {
+				acc[cell.medium] = cell;
+			}
+			// If the current cell's y-coordinate is higher than the topmost cell's y-coordinate for the current color, update the topmost cell
+			else if (cell.boundingBox.minY < acc[cell.medium].boundingBox.minY) {
+				acc[cell.medium] = cell;
+			}
+			return acc;
+		}, {});
 
-	const bottommostCells = cells.reduce((acc, cell) => {
-		// If the current cell's color is not in the accumulator object, add it with the current cell as the bottommost cell
-		if (!acc[cell.medium]) {
-			acc[cell.medium] = cell;
-		}
-		// If the current cell's y-coordinate is lower than the bottommost cell's y-coordinate for the current color, update the bottommost cell
-		else if (cell.boundingBox.maxY > acc[cell.medium].boundingBox.maxY) {
-			acc[cell.medium] = cell;
-		}
-		return acc;
-	}, {});
+		const bottommostCells = cells.reduce((acc, cell) => {
+			// If the current cell's color is not in the accumulator object, add it with the current cell as the bottommost cell
+			if (!acc[cell.medium]) {
+				acc[cell.medium] = cell;
+			}
+			// If the current cell's y-coordinate is lower than the bottommost cell's y-coordinate for the current color, update the bottommost cell
+			else if (cell.boundingBox.maxY > acc[cell.medium].boundingBox.maxY) {
+				acc[cell.medium] = cell;
+			}
+			return acc;
+		}, {});
 
-	for (const [index, cell] of Object.entries(topmostCells)) {
-		// const damp = 11.65;
-		const offset = -30;
-		// Set the topmost cell's state to 1
-		cell.setCurrent(1, Math.floor(cell.boundingBox.minY / dampFactor) + offset);
-		aliveCellIndizes.add(cell.index);
-		// Set the topmost cell's neighbors' state to 0
-		for (const neighborIndex of cell.neighbors) {
-			if (cells[neighborIndex].medium === cell.medium) {
-				cells[neighborIndex].setCurrent(
-					0,
-					Math.floor(cell.boundingBox.minY / dampFactor) + offset
-				);
-				candidateCellIndizes.add(neighborIndex);
-				//aliveCellIndizes.add(neighborIndex); // optional?
+		for (const [index, cell] of Object.entries(topmostCells)) {
+			// const damp = 11.65;
+			const offset = -30;
+			// Set the topmost cell's state to 1
+			cell.setCurrent(
+				1,
+				Math.floor(cell.boundingBox.minY / dampFactor) + offset
+			);
+			// Update cellsData for the current cell
+			cellsData[cell.index].state = [...cell.state]; // Assuming state is an array
+			cellsData[cell.index].color = [...cell.color]; // Assuming color is an array
+			aliveCellIndizes.add(cell.index);
+			// Set the topmost cell's neighbors' state to 0
+			for (const neighborIndex of cell.neighbors) {
+				if (cells[neighborIndex].medium === cell.medium) {
+					cells[neighborIndex].setCurrent(
+						0,
+						Math.floor(cell.boundingBox.minY / dampFactor) + offset
+					);
+					// Update cellsData for the neighbor cell
+					cellsData[neighborIndex].state = [...cells[neighborIndex].state];
+					cellsData[neighborIndex].color = [...cells[neighborIndex].color];
+					candidateCellIndizes.add(neighborIndex);
+					//aliveCellIndizes.add(neighborIndex); // optional?
+				}
 			}
 		}
-	}
 
-	/* for (const [index, cell] of Object.entries(bottommostCells)) {
+		/* for (const [index, cell] of Object.entries(bottommostCells)) {
 		const damp = 10.973838195386703;
 		const offset = 0;
 		// Set the topmost cell's state to 1
@@ -136,6 +160,8 @@ function initCellBands(cells, dampFactor) {
 			}
 		}
 	} */
+		resolve();
+	});
 }
 
 function generate(startGen, numGens, mediumCounts) {
@@ -235,6 +261,7 @@ function generate(startGen, numGens, mediumCounts) {
 		// Update the main sets
 		aliveCellIndizes = newAliveCellIndizes;
 		candidateCellIndizes = newCandidateCellIndizes;
+		/* console.log("gen:", gen); */
 	}
 }
 

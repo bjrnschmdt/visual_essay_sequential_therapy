@@ -7,6 +7,7 @@
 	import { formatRgb } from "culori";
 	import { detectBreakpoints, getBreakpointValue } from "$utils/breakpoints";
 	import ScrollHint from "./helpers/ScrollHint.svelte";
+	import { cellsDataStore } from "./../simulation/Board";
 
 	export let content;
 	export let showGraphics;
@@ -14,33 +15,34 @@
 	let canvas;
 	let ctx;
 
-	let worker;
-
 	let cache = {};
 
 	let innerHeight,
 		scrollY = 0;
 	let currentBreakpoint;
 	let dampFactor;
-	let easeFactor = 32;
+	let easeFactor = 16;
 	let genCurrent, genDamped, genDelta;
 	let yPrevious, yDelta;
 	let poline;
 	let rgbColors = [],
 		d3Colors = [];
 	let boundingBoxes;
-	let boundingBoxWrapper;
+	let cellsData = [];
+	/* let boundingBoxWrapper ; */
+	const BOUNDING_BOX_WRAPPER_HEIGHT = 8649.2;
 	let isPending = false;
-
-	// Define the number of generations to generate at a time
-	const NUM_GENERATIONS = 1000;
-
-	// Define the starting generation number
-	let START_GEN = -30;
 
 	onMount(() => {
 		initializeCanvasAndBreakpoints();
 		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
+
+		cellsDataStore.subscribe((value) => {
+			cellsData = value;
+			if (cellsData.length > 0) {
+				requestAnimationFrame(animate);
+			}
+		});
 
 		// get the bounding boxes of the text paragraphs to get the amount of medium bands used for setting up the colors
 		boundingBoxes = getBoundingBoxes();
@@ -56,22 +58,18 @@
 		genDamped = -30;
 		genDelta = genCurrent - genDamped;
 
-		boundingBoxWrapper = d3.select(".wrapper").node().getBoundingClientRect();
+		/* boundingBoxWrapper = d3.select(".wrapper").node().getBoundingClientRect(); */
+		/* console.log("boundingBoxWrapper", boundingBoxWrapper.height); */
 
 		getSimulation(currentBreakpoint);
-
-		animate();
+		/* requestAnimationFrame(animate); */
+		/* animate(); */
 
 		d3.select(window).on("scroll", function () {
 			if (!isPending) {
 				isPending = true;
 				requestAnimationFrame(animate);
 			}
-		});
-
-		d3.select(window).on("beforeunload", function () {
-			// Close the worker thread
-			worker.terminate();
 		});
 
 		d3.select(window).on("resize", debounce(handleResize, 500));
@@ -89,10 +87,20 @@
 
 		// Update the cellular automaton based on scrollDelta
 		if (yDelta !== 0) {
+			/* console.log("translate"); */
 			// Translate the canvas to adjust for the scrolling
 			ctx.translate(0, -yDelta);
 			yPrevious = scrollY;
 		}
+
+		/* if (scrollY !== yPrevious) {
+			// Translate the canvas to adjust for the scrolling,
+			console.log("translate");
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.translate(0, -scrollY);
+			//cache[currentBreakpoint.key].render(ctx, scrollY);
+			yPrevious = scrollY;
+		} */
 
 		genCurrent = scrollY / dampFactor;
 		genDelta = genCurrent - genDamped;
@@ -103,7 +111,11 @@
 		);
 
 		// Display the board with the updated Y values
+		/* console.log("cache", cache[currentBreakpoint.key]);
+		console.log("genDamped", genDamped); */
 		cache[currentBreakpoint.key].display(genDamped);
+
+		/* cache[currentBreakpoint.key].update(genDamped); */
 
 		// If animation is still in progress or there's potential for more scrolling
 		if (Math.abs(genDelta) > 0.1 || Math.abs(yDelta) > 0) {
@@ -226,7 +238,7 @@
 		/* console.log("cache miss, create new board"); */
 		cache[cacheKey] = new Board(
 			parameters.width,
-			boundingBoxWrapper.height,
+			BOUNDING_BOX_WRAPPER_HEIGHT,
 			ctx,
 			scrollY,
 			innerHeight,
@@ -235,8 +247,9 @@
 			rgbColors
 		);
 
-		/* console.log("generate new board"); */
+		/* console.log("created new board");
 		cache[cacheKey].generate(START_GEN, NUM_GENERATIONS);
+		console.log("called generate"); */
 	}
 </script>
 
