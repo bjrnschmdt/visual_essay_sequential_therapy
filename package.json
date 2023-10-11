@@ -49,6 +49,7 @@
 		"d3-hexbin": "^0.2.2",
 		"p5": "^1.6.0",
 		"poline": "^0.7.0",
-		"simplex-noise": "^4.0.1"
+		"simplex-noise": "^4.0.1",
+		"webfontloader": "^1.6.28"
 	}
 }
