@@ -16,42 +16,34 @@
 			window.removeEventListener("scroll", handleScroll);
 		};
 	});
-</script>
 
-<!-- <div id="scrollHint" on:click="{() => window.scrollBy(0, window.innerHeight)}">
-	⬇️
-</div> -->
-
-<div id="scrollHint" class="scroll"></div>
-
-<style>
-	/* #scrollHint {
-		position: fixed;
-		bottom: 10%;
-		left: 50%;
-		transform: translateX(-50%);
-		cursor: pointer;
-		animation: bounce 1s infinite;
-		opacity: 1;
-		transition: opacity 0.5s ease-out;
+	function smoothScrollDown() {
+		const newY = window.scrollY + window.innerHeight;
+		window.scrollTo({
+			top: newY,
+			behavior: "smooth"
+		});
 	}
 
-	@keyframes bounce {
-		0%,
-		20%,
-		50%,
-		80%,
-		100% {
-			transform: translateY(0);
+	function handleKeydown(event) {
+		// Check if the "Enter" key was pressed
+		if (event.key === "Enter") {
+			smoothScrollDown();
 		}
-		40% {
-			transform: translateY(-10px);
-		}
-		60% {
-			transform: translateY(-5px);
-		}
-	} */
+	}
+</script>
 
+<div
+	id="scrollHint"
+	class="scroll"
+	on:click="{smoothScrollDown}"
+	on:keydown="{handleKeydown}"
+	tabindex="0"
+	role="button"
+	aria-label="Scroll down"
+></div>
+
+<style>
 	.scroll {
 		transition: opacity 0.5s ease-out;
 		margin-top: 32px;
@@ -62,6 +54,10 @@
 		position: relative;
 		animation: down 1.5s infinite;
 		-webkit-animation: down 1.5s infinite;
+	}
+
+	.scroll:hover {
+		cursor: pointer;
 	}
 
 	.scroll::before {
