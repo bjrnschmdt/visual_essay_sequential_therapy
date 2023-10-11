@@ -8,6 +8,7 @@
 	import { detectBreakpoints, getBreakpointValue } from "$utils/breakpoints";
 	import ScrollHint from "./helpers/ScrollHint.svelte";
 	import { cellsDataStore } from "./../simulation/Board";
+	import { loadFonts } from "$utils/fontLoader";
 
 	export let content;
 	export let showGraphics;
@@ -29,50 +30,55 @@
 		d3Colors = [];
 	let boundingBoxes;
 	let cellsData = [];
-	/* let boundingBoxWrapper ; */
-	const BOUNDING_BOX_WRAPPER_HEIGHT = 8649.2;
-	let isPending = false;
+	let boundingBoxWrapper;
+	/* const BOUNDING_BOX_WRAPPER_HEIGHT = 8649.2; */
+	let isPending = true;
 
-	onMount(() => {
-		initializeCanvasAndBreakpoints();
-		if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
+	onMount(async () => {
+		try {
+			await loadFonts(() => {
+				boundingBoxWrapper = d3
+					.select(".wrapper")
+					.node()
+					.getBoundingClientRect();
+				/* console.log("boundingBoxWrapper.height:", boundingBoxWrapper.height); */
+			});
 
-		cellsDataStore.subscribe((value) => {
-			cellsData = value;
-			if (cellsData.length > 0) {
-				requestAnimationFrame(animate);
+			await initializeCanvasAndBreakpoints();
+
+			if (showGraphics) {
+				cellsDataStore.subscribe((value) => {
+					cellsData = value;
+					if (cellsData.length > 0 && cache[currentBreakpoint.key]) {
+						requestAnimationFrame(animate);
+					}
+				});
+				boundingBoxes = getBoundingBoxes();
+				setupColors();
+				updateStyles();
+
+				yPrevious = scrollY;
+				yDelta = 0;
+				dampFactor = currentBreakpoint.value;
+				genCurrent = scrollY / dampFactor;
+				genDamped = -30;
+				genDelta = genCurrent - genDamped;
+
+				getSimulation(currentBreakpoint);
+
+				d3.select(window).on("scroll", function () {
+					if (!isPending) {
+						isPending = true;
+						requestAnimationFrame(animate);
+					}
+				});
 			}
-		});
 
-		// get the bounding boxes of the text paragraphs to get the amount of medium bands used for setting up the colors
-		boundingBoxes = getBoundingBoxes();
-
-		setupColors();
-		updateStyles();
-
-		yPrevious = scrollY;
-		yDelta = 0;
-
-		dampFactor = currentBreakpoint.value;
-		genCurrent = scrollY / dampFactor;
-		genDamped = -30;
-		genDelta = genCurrent - genDamped;
-
-		/* boundingBoxWrapper = d3.select(".wrapper").node().getBoundingClientRect(); */
-		/* console.log("boundingBoxWrapper", boundingBoxWrapper.height); */
-
-		getSimulation(currentBreakpoint);
-		/* requestAnimationFrame(animate); */
-		/* animate(); */
-
-		d3.select(window).on("scroll", function () {
-			if (!isPending) {
-				isPending = true;
-				requestAnimationFrame(animate);
-			}
-		});
-
-		d3.select(window).on("resize", debounce(handleResize, 500));
+			d3.select(window).on("resize", debounce(handleResize, 500));
+			if (!showGraphics) return; // Don't run the simulation if the graphics are hidden
+		} catch (error) {
+			console.error("An error occurred:", error);
+		}
 	});
 
 	/**
@@ -89,7 +95,13 @@
 		if (yDelta !== 0) {
 			/* console.log("translate"); */
 			// Translate the canvas to adjust for the scrolling
-			ctx.translate(0, -yDelta);
+			/* ctx.translate(0, -yDelta); */
+			yPrevious = scrollY;
+
+			// Clear any existing transformations
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			// Apply the new translation based on scrollY
+			ctx.translate(0, -scrollY);
 			yPrevious = scrollY;
 		}
 
@@ -133,6 +145,8 @@
 			updateCanvasSize(currentBreakpoint.width, innerHeight);
 			genDamped = -30;
 			ctx.translate(0, -scrollY);
+			boundingBoxWrapper = d3.select(".wrapper").node().getBoundingClientRect();
+			boundingBoxes = getBoundingBoxes();
 			getSimulation(currentBreakpoint);
 			requestAnimationFrame(animate);
 		}
@@ -179,21 +193,24 @@
 	}
 
 	function initializeCanvasAndBreakpoints() {
-		// detect breakpoints
-		detectBreakpoints();
-		currentBreakpoint = getBreakpointValue();
+		return new Promise((resolve) => {
+			// detect breakpoints
+			detectBreakpoints();
+			currentBreakpoint = getBreakpointValue();
 
-		// Get the canvas context
-		ctx = canvas.getContext("2d");
+			// Get the canvas context
+			ctx = canvas.getContext("2d");
 
-		// Set the canvas dimensions
-		canvas.width = currentBreakpoint.width;
-		canvas.height = innerHeight;
-		ctx.translate(0, -scrollY);
+			// Set the canvas dimensions
+			canvas.width = currentBreakpoint.width;
+			canvas.height = innerHeight;
+			ctx.translate(0, -scrollY);
 
-		// Override the CSS styles to avoid stretching
-		canvas.style.width = "auto";
-		canvas.style.height = "auto";
+			// Override the CSS styles to avoid stretching
+			canvas.style.width = "auto";
+			canvas.style.height = "auto";
+			resolve();
+		});
 	}
 
 	function setupColors() {
@@ -236,9 +253,10 @@
 
 		// Otherwise, compute and store in cache
 		/* console.log("cache miss, create new board"); */
+
 		cache[cacheKey] = new Board(
 			parameters.width,
-			BOUNDING_BOX_WRAPPER_HEIGHT,
+			boundingBoxWrapper.height,
 			ctx,
 			scrollY,
 			innerHeight,
@@ -290,7 +308,7 @@
 	}
 
 	h1 {
-		font-family: "Golos Text";
+		font-family: "Golos Text", sans-serif;
 		font-weight: 700;
 		line-height: 1;
 		font-size: clamp(var(--18px), 8vw, var(--56px));
@@ -302,7 +320,7 @@
 	}
 
 	h2 {
-		font-family: "Golos Text";
+		font-family: "Golos Text", sans-serif;
 		font-weight: 400;
 		line-height: 1;
 		font-size: clamp(var(--16px), 4vw, var(--18px));
@@ -314,7 +332,7 @@
 	}
 
 	p {
-		font-family: "Golos Text";
+		font-family: "Golos Text", sans-serif;
 		line-height: 1.6;
 		width: 100%;
 		max-width: 560px;

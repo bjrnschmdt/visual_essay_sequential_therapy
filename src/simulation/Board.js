@@ -9,7 +9,7 @@ const THRESHOLD = 2;
 const RADIUS = 16;
 const GEN_DAMPED = -30;
 const EASE_FACTOR = 16;
-export const cellsDataStore = writable([]);
+export let cellsDataStore = writable([]);
 
 // Define the number of generations to generate at a time
 const NUM_GENERATIONS = 1000;
@@ -55,7 +55,9 @@ export default class Board {
 				[this.width, this.height]
 			])
 			.addAll(this.points.map((point, index) => [...point, index]));
-		this.visibleCellsCache = new Map();
+		/* this.visibleCellsCache = new Map(); */
+		this.visibleCellsCache = {};
+
 		this.delaunay = Delaunay.from(this.points);
 		this.voronoi = this.delaunay.voronoi([
 			0.5,
@@ -268,6 +270,7 @@ export default class Board {
 
 		let visibleIndices = this.getVisibleCells(scrollY, this.innerHeight);
 		/* console.log("display visibleIndices:", visibleIndices); */
+		/* const visibleIndices = this.getVisibleCellsCache(); */
 
 		for (const index of visibleIndices) {
 			const cell = this.cellsData[index];
@@ -345,6 +348,43 @@ export default class Board {
 
 		return visibleIndices;
 	};
+
+	/* getVisibleCells = (visibleRect) => {
+		let visibleIndices = [];
+
+		let topBound = visibleRect.top - 8;
+		let bottomBound = visibleRect + 8;
+
+		this.quadtree.visit((node, x1, y1, x2, y2) => {
+			// Check if node's bounding box is outside the expanded viewport; if so, skip its children
+			if (y2 < topBound || y1 > bottomBound) return true;
+
+			// If leaf node, add index to visibleIndices
+			if (!node.length) {
+				let dataIndex = node.data[2]; // Retrieve the index
+				visibleIndices.push(dataIndex);
+			}
+		});
+
+		return visibleIndices;
+	}; */
+
+	getVisibleCellsCache() {
+		const interval = INTERVAL;
+		const key = Math.floor(scrollY / interval) * interval; // This gets the nearest lower multiple of 100
+
+		if (!this.visibleCellsCache[key]) {
+			const extendedViewportHeight = innerHeight + 2 * interval; // Expanding by 100px on top and bottom
+			const visibleRect = {
+				top: key - interval,
+				bottom: key + extendedViewportHeight
+			};
+
+			this.visibleCellsCache[key] = this.getVisibleCells(visibleRect);
+		}
+		/* console.log("visibleCellsCache:", this.visibleCellsCache); */
+		return this.visibleCellsCache[key];
+	}
 
 	/**
 	 * Returns an object containing the count of each medium in the given array of cells.
