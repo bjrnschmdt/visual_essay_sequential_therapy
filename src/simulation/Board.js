@@ -4,6 +4,12 @@ import { Delaunay } from "d3-delaunay";
 import { poissonDiscSampler } from "./poissonDiscSampler";
 import MyWorker from "./../simulation/my-worker.worker.js?worker";
 import { writable } from "svelte/store";
+/* import { theme } from "$stores/theme.js";
+
+let themeValue;
+theme.subscribe((value) => {
+	themeValue = value;
+}); */
 
 const THRESHOLD = 2;
 const RADIUS = 16;
@@ -28,7 +34,8 @@ export default class Board {
 		innerHeight,
 		dampFactor,
 		boundingBoxes,
-		RgbColors
+		RgbColors,
+		themeValue
 	) {
 		this.listeners = new Map();
 		this.threshold = THRESHOLD;
@@ -44,7 +51,7 @@ export default class Board {
 		this.genDelta = this.genCurrent - this.genDamped;
 		this.genLastRendered = null;
 		this.easeFactor = EASE_FACTOR;
-
+		this.themeValue = themeValue;
 		this.points = [
 			...poissonDiscSampler(0, 0, this.width, this.height, this.radius)
 		];
@@ -277,11 +284,11 @@ export default class Board {
 			this.ctx.beginPath();
 			this.voronoi.renderCell(index, this.ctx);
 			this.ctx.strokeStyle = d3
-				.color(getColor(cell, genDampedRounded))
+				.color(getColor(cell, genDampedRounded, this.themeValue))
 				.brighter()
 				.formatRgb();
 			this.ctx.stroke();
-			this.ctx.fillStyle = getColor(cell, genDampedRounded);
+			this.ctx.fillStyle = getColor(cell, genDampedRounded, this.themeValue);
 			this.ctx.fill();
 			this.ctx.closePath();
 		}
@@ -304,9 +311,13 @@ export default class Board {
 			/* console.log("color:", this.cellsData[index].color[0]); */
 			this.ctx.beginPath();
 			this.voronoi.renderCell(index, this.ctx);
-			this.ctx.strokeStyle = d3.color(cell.color[0]).brighter().formatRgb();
+			this.ctx.strokeStyle =
+				this.themeValue === "dark"
+					? d3.color(cell.color[0]).brighter().formatRgb()
+					: d3.color(cell.colorLight[0]).brighter().formatRgb();
 			this.ctx.stroke();
-			this.ctx.fillStyle = cell.color[0];
+			this.ctx.fillStyle =
+				this.themeValue === "dark" ? cell.color[0] : cell.colorLight[0];
 			this.ctx.fill();
 			this.ctx.closePath();
 		}
@@ -407,12 +418,20 @@ export default class Board {
 	};
 }
 
-function getColor(cell, gen) {
-	return isAlive(cell, gen)
-		? cell.color[getCurrentStateIndex(cell, gen)]
-		: isDead(cell, gen)
-		? cell.color[Cell.lifetime - 1]
-		: cell.color[0];
+function getColor(cell, gen, themeValue) {
+	if (themeValue === "dark") {
+		return isAlive(cell, gen)
+			? cell.color[getCurrentStateIndex(cell, gen)]
+			: isDead(cell, gen)
+			? cell.color[Cell.lifetime - 1]
+			: cell.color[0];
+	} else if (themeValue === "light") {
+		return isAlive(cell, gen)
+			? cell.colorLight[getCurrentStateIndex(cell, gen)]
+			: isDead(cell, gen)
+			? cell.colorLight[Cell.lifetime - 1]
+			: cell.colorLight[0];
+	}
 }
 
 function isAlive(cell, gen) {

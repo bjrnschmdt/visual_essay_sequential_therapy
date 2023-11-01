@@ -12,6 +12,14 @@ function multiplyRgb(c1, c2, factor) {
 	return rgb(r, g, b);
 }
 
+function lightenRgb(c1, c2, factor) {
+	// Apply the "lighten" blend mode formula to each color channel
+	const r = Math.round(c1.r + factor * (Math.max(c1.r, c2.r) - c1.r));
+	const g = Math.round(c1.g + factor * (Math.max(c1.g, c2.g) - c1.g));
+	const b = Math.round(c1.b + factor * (Math.max(c1.b, c2.b) - c1.b));
+	return rgb(r, g, b); // Adjust this return statement according to how you want to structure the returned color
+}
+
 function calcNoise(x, y, noiseScale) {
 	let perlinNorm = noise(x * noiseScale, y * noiseScale * 0.5);
 	let perlinRgb = Math.round(mapNoise2Rgb(perlinNorm));
@@ -34,15 +42,20 @@ export default class Cell {
 		this.medium = medium_;
 		this.state = []; // State of the cell per step in lifetime
 		this.color = []; // Color of the cell per step in lifetime
+		this.colorLight = [];
 		this.noiseBaseScale = 0.001; // Scale of the perlin noise of the antibiotic medium
 		this.noiseBactScale = 0.008; // Scale of the perlin noise of the bacteria
 		this.noiseBaseFactor = 0.5; // Factor of the perlin noise of the antibiotic medium
 		this.noiseBactFactor = 0.9; // Factor of the perlin noise of the bacteria
+		this.noiseBaseFactorLight = 1; // Factor of the perlin noise of the antibiotic medium
+		this.noiseBactFactorLight = 0.5; // Factor of the perlin noise of the bacteria
 		this.noiseBase = calcNoise(this.x, this.y, this.noiseBaseScale); // Perlin noise of the antibiotic medium
 		this.noiseBact = calcNoise(this.x, this.y, this.noiseBactScale); // Perlin noise of the bacteria
 		this.colorBase = rgb(105, 105, 105); // Initial color of the antibiotic medium
+		this.colorBaseLight = rgb(medium_);
 		/* this.colorBact = rgb(255, 0, 0); */ // Initial color of the bacteria
 		this.colorBact = rgb(medium_);
+		this.colorBactLight = rgb(105, 105, 105);
 		this.colorBaseComp = multiplyRgb(
 			this.colorBase,
 			this.noiseBase,
@@ -53,6 +66,16 @@ export default class Cell {
 			this.noiseBact,
 			this.noiseBactFactor
 		); // Composite color of the bacteria and the perlin noise
+		this.colorBaseCompLight = multiplyRgb(
+			this.colorBaseLight,
+			this.noiseBase,
+			this.noiseBaseFactorLight
+		); // Composite color of the antibiotic medium and the perlin noise
+		this.colorBactCompLight = multiplyRgb(
+			this.colorBactLight,
+			this.noiseBact,
+			this.noiseBactFactorLight
+		);
 		this.boundingBox = null;
 		this.init();
 	}
@@ -122,6 +145,11 @@ export default class Cell {
 		let factor = customPolyInOut(normalizeState(i));
 		const interpolator = interpolateRgb(this.colorBaseComp, this.colorBactComp);
 		this.color[i] = interpolator(factor);
+		const interpolatorLight = interpolateRgb(
+			this.colorBaseCompLight,
+			this.colorBactCompLight
+		);
+		this.colorLight[i] = interpolatorLight(factor);
 	};
 
 	getIndex = () => {

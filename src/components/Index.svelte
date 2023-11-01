@@ -9,9 +9,18 @@
 	import ScrollHint from "./helpers/ScrollHint.svelte";
 	import { cellsDataStore } from "./../simulation/Board";
 	import { loadFonts } from "$utils/fontLoader";
+	import { writable } from "svelte/store";
+	/* import { theme } from "$stores/theme.js";
+
+	let themeValue;
+	theme.subscribe((value) => {
+		themeValue = value;
+	});
+	console.log("themeValue", themeValue); */
 
 	export let content;
 	export let showGraphics;
+	export let themeValue = "dark";
 
 	let canvas;
 	let ctx;
@@ -262,7 +271,8 @@
 			innerHeight,
 			dampFactor,
 			boundingBoxes,
-			rgbColors
+			rgbColors,
+			themeValue
 		);
 
 		/* console.log("created new board");
@@ -313,7 +323,7 @@
 		line-height: 1;
 		font-size: clamp(var(--18px), 8vw, var(--56px));
 		z-index: 99;
-		color: white;
+		color: var(--color-h1);
 		width: 100%;
 		max-width: 560px;
 		text-align: left;
@@ -325,7 +335,7 @@
 		line-height: 1;
 		font-size: clamp(var(--16px), 4vw, var(--18px));
 		z-index: 99;
-		color: white;
+		color: var(--color-h1);
 		width: 100%;
 		max-width: 560px;
 		text-align: left;

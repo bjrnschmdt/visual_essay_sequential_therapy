@@ -44,6 +44,7 @@ onmessage = (event) => {
 				index: index,
 				boundingBox: cells[index].getBoundingBox(),
 				color: cells[index].color,
+				colorLight: cells[index].colorLight,
 				state: cells[index].state,
 				medium: medium
 			};
@@ -124,6 +125,7 @@ function initCellBands(cells, dampFactor) {
 			cellsData[cell.index].state = [...cell.state]; // Assuming state is an array
 			cellsData[cell.index].color = [...cell.color]; // Assuming color is an array
 			aliveCellIndizes.add(cell.index);
+			/* console.log("cellsData[cell.index]:", cellsData[cell.index]); */
 			// Set the topmost cell's neighbors' state to 0
 			for (const neighborIndex of cell.neighbors) {
 				if (cells[neighborIndex].medium === cell.medium) {

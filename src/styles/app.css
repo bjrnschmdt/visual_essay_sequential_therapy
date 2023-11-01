@@ -4,7 +4,7 @@
 @import "reset.css";
 
 /* colors defined in variables.css */
-:root {
+:root[data-theme='light'] {
 	/* font */
 	--sans: "National 2 Web", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 	--serif: "Tiempos Text Web", Iowan Old Style, Times New Roman, Times, serif;
@@ -42,8 +42,9 @@
 /* dark theme */
 /* this is a starting place for dark mode - test before deploying */
 
-/* @media screen and (prefers-color-scheme:dark) {
-	:root {
+/* @media screen and (prefers-color-scheme:dark) { */
+	:root[data-theme='dark'] {
+		
 		--color-bg: var(--color-gray-900);
 		--color-fg: var(--color-gray-100);
 		--color-primary: var(--color-white);
@@ -60,7 +61,18 @@
 		--color-placeholder: var(--color-gray-400);
 		--color-text-outline: var(--color-bg);
 	}
-} */
+/* } */
+
+main[data-theme='light'] {
+   
+	--color-h1: var(--color-gray-100);
+    /* ... other light theme styles */
+}
+
+main[data-theme='dark'] {
+	--color-h1: var(--color-gray-900);
+    /* ... other dark theme styles */
+}
 
 @media screen and (prefers-reduced-motion: no-preference) {
 	:root {
