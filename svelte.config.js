@@ -19,12 +19,13 @@ const preprocess = sveltePreprocess({
 const config = {
 	preprocess,
 	kit: {
-		adapter: adapterStatic(),
+		/* adapter: adapterStatic(), */
 		paths: {
 			base
 		},
 		adapter: adapter({
 			// see the 'Deployment configuration' section below
+			runtime: "nodejs20.x" // Specify Node.js runtime version
 		})
 	},
 	vitePlugin: {
