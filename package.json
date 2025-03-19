@@ -38,10 +38,10 @@
 	},
 	"type": "module",
 	"engines": {
-		"node": ">= 18.12.0"
+		"node": "20.x"
 	},
 	"browserslist": "> 0.5%, last 4 versions, not ie <= 11, not ie_mob <= 11",
-	"subdirectory": "visual_essay_sequential_therapy",
+	"subdirectory": "",
 	"dependencies": {
 		"culori": "^3.2.0",
 		"d3-color": "^3.1.0",
