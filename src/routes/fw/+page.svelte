@@ -17,8 +17,8 @@
 		"https://pudding.cool/assets/fonts/national/National2Web-Regular.woff2",
 		"https://pudding.cool/assets/fonts/national/National2Web-Bold.woff2"
 	]; */
-	const { h1, fear_frame: text } = parsed;
-	const content = { h1, text };
+	const { h1, h2, fear_frame: text } = parsed;
+	const content = { h1, h2, text };
 	const { title, description, url, keywords } = copy;
 	const showGraphics = true;
 	setContext("copy", copy);
