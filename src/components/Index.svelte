@@ -19,8 +19,12 @@
 	console.log("themeValue", themeValue); */
 
 	export let content;
-	export let showGraphics;
+	export let showGraphics = true;
+	export let showText = true;
 	export let themeValue = "dark";
+	export let darkmode = true;
+	export let grayscale = true;
+	export let fontStyle = "sans-serif";
 
 	let canvas;
 	let ctx;
@@ -76,6 +80,7 @@
 				getSimulation(currentBreakpoint);
 
 				d3.select(window).on("scroll", function () {
+					/* console.log("Scroll detected:", scrollY); */
 					if (!isPending) {
 						isPending = true;
 						requestAnimationFrame(animate);
@@ -97,6 +102,7 @@
 	 * values is less than 0.1, the animation stops.
 	 */
 	function animate() {
+		/* console.log("animate"); */
 		// Compute the difference between the current and previous scroll values; used to translate the canvas
 		yDelta = scrollY - yPrevious;
 
@@ -191,6 +197,23 @@
 		return value.toFixed(1);
 	}
 
+	/* 	function getDistributedTextSecondary(index) {
+		let textPrimaryLength = content.text.length;
+		let textSecondaryLength = content.textSecondary.length;
+
+		if (textSecondaryLength === 0) return "";
+
+		let step = Math.floor(textPrimaryLength / textSecondaryLength);
+		let secondaryIndex = Math.floor(index / step);
+
+		// Ensure secondaryIndex is within bounds
+		if (secondaryIndex >= textSecondaryLength) {
+			secondaryIndex = textSecondaryLength - 1;
+		}
+
+		return content.textSecondary[secondaryIndex]?.text || "";
+	} */
+
 	function debounce(func, delay) {
 		let timer;
 		return function (...args) {
@@ -218,6 +241,8 @@
 			// Override the CSS styles to avoid stretching
 			canvas.style.width = "auto";
 			canvas.style.height = "auto";
+			console.log("themeValue", themeValue);
+
 			resolve();
 		});
 	}
@@ -226,8 +251,8 @@
 		poline = new Poline({
 			numPoints: boundingBoxes.length - 2,
 			anchorColors: [
-				[0, 1.0, 1.0],
-				[0, 1.0, 0.5]
+				grayscale ? [0, 0.0, 0.35] : [0, 1.0, 1.0], // white // white
+				grayscale ? [0, 0.0, 1.0] : [0, 1.0, 0.5] // red or black
 				// ... more colors
 			]
 		});
@@ -239,6 +264,7 @@
 
 		// Convert rgbColors to d3.color format
 		d3Colors = [...rgbColors].map((c) => color(c));
+		/* console.log("d3Colors", d3Colors); */
 	}
 
 	function updateStyles() {
@@ -272,33 +298,94 @@
 			dampFactor,
 			boundingBoxes,
 			rgbColors,
-			themeValue
+			themeValue,
+			grayscale
 		);
 
 		/* console.log("created new board");
 		cache[cacheKey].generate(START_GEN, NUM_GENERATIONS);
 		console.log("called generate"); */
 	}
+
+	function getDistributedTextSecondary(index) {
+		// Ensure content and content.textSecondary exist
+		if (
+			!content ||
+			!Array.isArray(content.textSecondary) ||
+			content.textSecondary.length === 0
+		) {
+			return "";
+		}
+
+		const textPrimaryLength = content.text.length;
+		const textSecondaryLength = content.textSecondary.length;
+
+		// Prevent division by zero error
+		if (textSecondaryLength === 0 || textPrimaryLength === 0) return "";
+
+		// Calculate step size to distribute textSecondary items evenly
+		const step = (textPrimaryLength - 1) / (textSecondaryLength - 1);
+
+		// Find the target index for each textSecondary element
+		for (let i = 0; i < textSecondaryLength; i++) {
+			const targetIndex = Math.round(step * i);
+			if (index === targetIndex) {
+				const secondaryItem = content.textSecondary[i];
+
+				// If secondaryItem is missing, return an empty string
+				if (!secondaryItem) return "";
+
+				// If secondaryItem.text exists and is an array, return the joined string
+				if (Array.isArray(secondaryItem.text)) {
+					return secondaryItem.text.join(" | ");
+				}
+
+				// If secondaryItem.text is a string, return it
+				return secondaryItem.text || "";
+			}
+		}
+
+		return ""; // Return empty string if no textSecondary should be displayed at this index
+	}
 </script>
 
-<canvas bind:this="{canvas}"></canvas>
+<canvas bind:this="{canvas}" class="{darkmode ? '' : 'light-bg'}"></canvas>
 <div class="wrapper">
-	<div class="h1-wrap">
-		<h1>{content.h1}</h1>
-		<h2>Ein Visual Essay des Kiel Science Communication Network</h2>
+	<div class="{darkmode ? 'h1-wrap' : 'h1-wrap-light'}">
+		<h1 class="{fontStyle === 'serif' ? 'besley' : 'golos'}">{content.h1}</h1>
+		<h2 class="{fontStyle === 'serif' ? 'besley' : 'golos'}">{content.h2}</h2>
 		<ScrollHint />
 	</div>
 
 	{#each content.text as paragraph, index}
-		<div class="card-wrap">
-			{#if showGraphics}
-				<p class="info">
-					P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
-					{interpolate(index + 1)}x
+		{#if showText === true}
+			<div class="card-wrap">
+				{#if showGraphics}
+					<p class="info">
+						P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
+						{interpolate(index + 1)}x<br />
+						{#if getDistributedTextSecondary(index)}
+							{getDistributedTextSecondary(index)}
+						{/if}
+					</p>
+				{/if}
+				<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
+					{paragraph.value}
 				</p>
-			{/if}
-			<p class="card">{paragraph.value}</p>
-		</div>
+			</div>
+		{:else}
+			<div class="card-wrap-invisible">
+				{#if showGraphics}
+					<p class="info">
+						P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
+						{interpolate(index + 1)}x
+					</p>
+				{/if}
+				<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
+					{paragraph.value}
+				</p>
+			</div>
+		{/if}
 		<!-- <hr/> -->
 	{/each}
 </div>
@@ -313,36 +400,59 @@
 		align-items: center;
 		z-index: 1;
 		position: relative;
+		color: var(--color-gray-100);
+		/* color: var(--color-h1); */
 		/* max-width: calc(100% - 20px); */
 		height: 100vh;
 	}
 
-	h1 {
+	.h1-wrap-light {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		z-index: 1;
+		position: relative;
+		color: var(--color-gray-900);
+		/* color: var(--color-h1); */
+		/* max-width: calc(100% - 20px); */
+		height: 100vh;
+	}
+
+	.golos {
 		font-family: "Golos Text", sans-serif;
+	}
+
+	.besley {
+		font-family: "Besley", sans-serif;
+	}
+
+	h1 {
+		/* font-family: "Golos Text", sans-serif; */
 		font-weight: 700;
 		line-height: 1;
 		font-size: clamp(var(--18px), 8vw, var(--56px));
 		z-index: 99;
-		color: var(--color-h1);
+
 		width: 100%;
 		max-width: 560px;
 		text-align: left;
 	}
 
 	h2 {
-		font-family: "Golos Text", sans-serif;
+		/* font-family: "Golos Text", sans-serif; */
 		font-weight: 400;
 		line-height: 1;
 		font-size: clamp(var(--16px), 4vw, var(--18px));
 		z-index: 99;
-		color: var(--color-h1);
+		/* color: var(--color-h1); */
 		width: 100%;
 		max-width: 560px;
 		text-align: left;
 	}
 
 	p {
-		font-family: "Golos Text", sans-serif;
+		/* font-family: "Golos Text", sans-serif; */
 		line-height: 1.6;
 		width: 100%;
 		max-width: 560px;
@@ -352,6 +462,7 @@
 		position: absolute;
 		width: 100%;
 		padding: 0 16px;
+		/* background-color: black; */
 	}
 
 	canvas {
@@ -367,6 +478,10 @@
 		z-index: -1;
 	}
 
+	.light-bg {
+		background-color: rgb(255, 255, 255);
+	}
+
 	.card-wrap {
 		display: flex;
 		flex-direction: column;
@@ -377,6 +492,19 @@
 		max-width: 560px;
 		padding: 0 0 64px;
 		margin: auto;
+	}
+
+	.card-wrap-invisible {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+		align-items: center;
+		z-index: 1;
+		position: relative;
+		max-width: 560px;
+		padding: 0 0 64px;
+		margin: auto;
+		opacity: 0;
 	}
 
 	.card {
@@ -409,6 +537,11 @@
 		border-color: rgba(255, 0, 0, 0.35);
 		border-radius: 4px;
 		width: 100%;
+	}
+
+	.info ul {
+		padding-left: 0.5rem;
+		text-align: left;
 	}
 
 	@media (max-width: 480px) {
