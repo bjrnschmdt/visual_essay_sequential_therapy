@@ -18,7 +18,7 @@ export async function loadFonts(callback, afterBoundingBoxCallback) {
 
 		WebFont.load({
 			google: {
-				families: ["Golos Text:400,700", "Share Tech Mono"] // Replace with the font families you're using
+				families: ["Golos Text:400,700", "Share Tech Mono", "Besley:400,700"] // Replace with the font families you're using
 			},
 			active: () => {
 				if (callback) callback();
