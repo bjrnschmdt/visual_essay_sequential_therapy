@@ -10,6 +10,9 @@
 	import { cellsDataStore } from "./../simulation/Board";
 	import { loadFonts } from "$utils/fontLoader";
 	import { writable } from "svelte/store";
+
+	import { base } from "$app/paths";
+
 	/* import { theme } from "$stores/theme.js";
 
 	let themeValue;
@@ -19,12 +22,26 @@
 	console.log("themeValue", themeValue); */
 
 	export let content;
+	console.log("content", content);
 	export let showGraphics = true;
 	export let showText = true;
 	export let themeValue = "dark";
 	export let darkmode = true;
 	export let grayscale = true;
 	export let fontStyle = "sans-serif";
+
+	// Determine if the content is chapter-based:
+	let isChapterBased =
+		content.text &&
+		content.text.length > 0 &&
+		content.text[0].type === "chapter";
+
+	function getParagraphs(chapter) {
+		if (chapter.value?.[0]?.type === "image") {
+			return chapter.value.slice(1);
+		}
+		return chapter.value;
+	}
 
 	let canvas;
 	let ctx;
@@ -357,37 +374,51 @@
 		<ScrollHint />
 	</div>
 
-	{#each content.text as paragraph, index}
-		{#if showText === true}
-			<div class="card-wrap">
-				{#if showGraphics}
-					<p class="info">
-						P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
-						{interpolate(index + 1)}x<br />
-						{#if getDistributedTextSecondary(index)}
-							{getDistributedTextSecondary(index)}
-						{/if}
-					</p>
-				{/if}
-				<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
-					{paragraph.value}
-				</p>
+	{#if isChapterBased}
+		<!-- Loop over each chapter -->
+		{#each content.text as chapter}
+			<div class="chapter-container">
+				{#each chapter.value.filter((d) => d.type === "image") as image}
+					<figure class="chapter-image">
+						<img src="{base}{image.value.src}" alt="{image.value.alt}" />
+						<figcaption
+							class="chapter-caption {fontStyle === 'serif'
+								? 'besley'
+								: 'golos'}"
+						>
+							{image.value.caption}
+						</figcaption>
+					</figure>
+				{/each}
+
+				<div class="chapter-text">
+					<div class="{showText ? 'card-wrap' : 'card-wrap-invisible'}">
+						{#each getParagraphs(chapter) as paragraph}
+							{#if paragraph.type === "text"}
+								<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
+									{paragraph.value}
+								</p>
+							{/if}
+						{/each}
+					</div>
+				</div>
 			</div>
-		{:else}
-			<div class="card-wrap-invisible">
-				{#if showGraphics}
-					<p class="info">
-						P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
-						{interpolate(index + 1)}x
+		{/each}
+	{:else}
+		<!-- Fallback: render flat text items -->
+		{#each content.text as item}
+			{#if item.type === "text"}
+				<div class="{showText ? 'card-wrap' : 'card-wrap-invisible'}">
+					{#if showGraphics}
+						<p class="info">Info for item</p>
+					{/if}
+					<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
+						{item.value}
 					</p>
-				{/if}
-				<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
-					{paragraph.value}
-				</p>
-			</div>
-		{/if}
-		<!-- <hr/> -->
-	{/each}
+				</div>
+			{/if}
+		{/each}
+	{/if}
 </div>
 
 <svelte:window bind:scrollY="{scrollY}" bind:innerHeight="{innerHeight}" />
@@ -542,6 +573,39 @@
 	.info ul {
 		padding-left: 0.5rem;
 		text-align: left;
+	}
+
+	.chapter-container {
+		display: flex;
+		flex-direction: row;
+		align-items: flex-start;
+		margin-bottom: 64px;
+	}
+	.chapter-caption {
+		font-size: 0.85rem;
+		color: var(--color-gray-500);
+		margin-top: 4px;
+		text-align: left;
+		max-width: 100%;
+		word-break: break-word;
+	}
+
+	.chapter-image {
+		flex: 0 0 auto;
+		position: sticky;
+		top: 16px;
+		margin-right: 16px;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		max-width: 300px;
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+
+	.chapter-text {
+		flex: 1 1 auto;
 	}
 
 	@media (max-width: 480px) {
