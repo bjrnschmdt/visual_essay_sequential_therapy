@@ -392,31 +392,50 @@
 				{/each}
 
 				<div class="chapter-text">
-					<div class="{showText ? 'card-wrap' : 'card-wrap-invisible'}">
-						{#each getParagraphs(chapter) as paragraph}
+					{#each getParagraphs(chapter) as paragraph}
+						<div class="{showText ? 'card-wrap' : 'card-wrap-invisible'}">
 							{#if paragraph.type === "text"}
 								<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
 									{paragraph.value}
 								</p>
 							{/if}
-						{/each}
-					</div>
+						</div>
+					{/each}
 				</div>
 			</div>
 		{/each}
 	{:else}
 		<!-- Fallback: render flat text items -->
-		{#each content.text as item}
-			{#if item.type === "text"}
-				<div class="{showText ? 'card-wrap' : 'card-wrap-invisible'}">
+		{#each content.text as paragraph, index}
+			{#if showText === true}
+				<div class="card-wrap">
 					{#if showGraphics}
-						<p class="info">Info for item</p>
+						<p class="info">
+							P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
+							{interpolate(index + 1)}x<br />
+							{#if getDistributedTextSecondary(index)}
+								{getDistributedTextSecondary(index)}
+							{/if}
+						</p>
 					{/if}
 					<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
-						{item.value}
+						{paragraph.value}
+					</p>
+				</div>
+			{:else}
+				<div class="card-wrap-invisible">
+					{#if showGraphics}
+						<p class="info">
+							P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
+							{interpolate(index + 1)}x
+						</p>
+					{/if}
+					<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
+						{paragraph.value}
 					</p>
 				</div>
 			{/if}
+			<!-- <hr/> -->
 		{/each}
 	{/if}
 </div>
