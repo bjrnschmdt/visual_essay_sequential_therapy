@@ -21,8 +21,8 @@
 	const {
 		h1: h1,
 		h2: h2,
-		neutral_frame: text,
-		daily_short_fear: textSecondary
+		neutral_frame_v2: text,
+		daily_short_fear_v2: textSecondary
 	} = parsed;
 	const content = { h1, h2, text, textSecondary };
 	const { title, description, url, keywords } = copy;

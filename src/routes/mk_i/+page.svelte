@@ -21,7 +21,7 @@
 	const {
 		h1: h1,
 		h2: h2,
-		neutral_frame_with_chapters: text,
+		neutral_frame_with_chapters_v2: text,
 		daily: textSecondary
 	} = parsed;
 	const content = { h1, h2, text, textSecondary };

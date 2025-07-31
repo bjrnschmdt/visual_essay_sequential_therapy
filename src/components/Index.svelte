@@ -208,9 +208,9 @@
 		return value.toFixed(1);
 	}
 
-	function interpolate(x, y1 = 0.5, y2 = 40, x1 = 1, x2 = 24, p = 2) {
+	function interpolate(x, x1 = 1, x2 = 24, y1 = 0.5, y2 = 40, p = 2) {
 		let value = y1 + (y2 - y1) * Math.pow((x - x1) / (x2 - x1), p);
-		value = value * 2; // correcting the concentration level
+		/* value = value * 2;  */ // correcting the concentration level
 		return value.toFixed(1);
 	}
 
@@ -411,8 +411,13 @@
 				<div class="card-wrap">
 					{#if showGraphics}
 						<p class="info">
-							P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
-							{interpolate(index + 1)}x<br />
+							Laborprotokoll | P.aeruginosa | Tag {(index + 1)
+								.toString()
+								.padStart(2, "0")}
+							| Antibiotikakonzentration
+							{index === 0
+								? "0"
+								: interpolate(index, 1, content.text.length - 1, 1, 64)}x<br />
 							{#if getDistributedTextSecondary(index)}
 								{getDistributedTextSecondary(index)}
 							{/if}
@@ -426,8 +431,11 @@
 				<div class="card-wrap-invisible">
 					{#if showGraphics}
 						<p class="info">
-							P.aeruginosa | Tag {(index + 1).toString().padStart(2, "0")} | Antibiotikakonzentration
-							{interpolate(index + 1)}x
+							Laborprotokoll | P.aeruginosa | Tag {index
+								.toString()
+								.padStart(2, "0")}
+							| Antibiotikakonzentration
+							{interpolate(index)}x
 						</p>
 					{/if}
 					<p class="card {fontStyle === 'serif' ? 'besley' : 'golos'}">
